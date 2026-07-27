@@ -88,6 +88,9 @@
     font-size: 13px; cursor: pointer; transition: all 0.15s;
   }
   .filters button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .filters .clear-done { margin-left: auto; color: var(--red); border-color: transparent; }
+  .filters .clear-done:hover { border-color: var(--red); }
+  .filters .clear-done:disabled { opacity: 0.4; cursor: default; border-color: transparent; }
 
   ul#taskList { list-style: none; display: flex; flex-direction: column; gap: 10px; }
   .task {
@@ -165,6 +168,7 @@
     <button data-filter="all" class="active">All</button>
     <button data-filter="pending">Pending</button>
     <button data-filter="done">Done</button>
+    <button class="clear-done" id="clearDoneBtn">Clear completed</button>
   </div>
 
   <ul id="taskList"></ul>
@@ -228,6 +232,7 @@
     document.getElementById("progressFill").style.width = rate + "%";
     document.getElementById("progressLabel").textContent =
       total === 0 ? "No tasks yet" : `${done} of ${total} tasks complete`;
+    document.getElementById("clearDoneBtn").disabled = done === 0;
   }
 
   function addTask() {
@@ -242,6 +247,11 @@
   }
 
   document.getElementById("addBtn").onclick = addTask;
+  document.getElementById("clearDoneBtn").onclick = () => {
+    tasks = tasks.filter(t => !t.done);
+    save();
+    render();
+  };
   document.getElementById("taskInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addTask();
   });

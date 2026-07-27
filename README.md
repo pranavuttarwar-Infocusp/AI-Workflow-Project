@@ -49,7 +49,7 @@ network calls — everything runs and stays in your browser.
 └── .gitignore
 ```
 
-docs: add author
+docs: add author by pranav
 
 ## License
 

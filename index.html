@@ -142,6 +142,10 @@
   .empty .icon { font-size: 36px; margin-bottom: 10px; }
 
   footer { margin-top: 32px; text-align: center; font-size: 12px; color: var(--text-dim); }
+  footer kbd {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 6px; font-size: 11px; font-family: inherit;
+  }
 
   @media (max-width: 520px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
@@ -190,7 +194,7 @@
 
   <ul id="taskList"></ul>
 
-  <footer>TaskPulse demo · data persists in your browser (localStorage)</footer>
+  <footer>TaskPulse demo · data persists in your browser (localStorage) · <kbd>Enter</kbd> adds, <kbd>Esc</kbd> clears</footer>
 </div>
 
 <script>
@@ -271,6 +275,7 @@
   };
   document.getElementById("taskInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addTask();
+    if (e.key === "Escape") { e.target.value = ""; e.target.blur(); }
   });
   document.querySelectorAll(".filters button").forEach(btn => {
     btn.onclick = () => {

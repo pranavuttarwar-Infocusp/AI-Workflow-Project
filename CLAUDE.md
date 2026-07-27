@@ -62,4 +62,4 @@
 - Any user-visible feature change must update the README feature list in the same PR
 - New keyboard shortcuts must also be documented in the app footer
 
-**Updated**: 2026-07-27
+**Nested**: `docs/ui-layout.md`, `docs/state-storage.md`, `docs/rendering.md`, `docs/theming.md`, `docs/interactions.md` | **Updated**: 2026-07-27

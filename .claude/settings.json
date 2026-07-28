@@ -1,0 +1,58 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git checkout -b *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git pull *)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
+      "Bash(python3 -m http.server *)",
+      "Bash(open index.html)"
+    ],
+    "ask": [
+      "Bash(git checkout *)",
+      "Bash(git push *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
+  },
+  "env": {
+    "PROJECT_NAME": "TaskPulse"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; case \"$f\" in *.html) python3 -c \"\nimport sys\ntext = open(sys.argv[1]).read()\nproblems = []\nif not text.rstrip().endswith('</html>'): problems.append('file does not end with </html> (truncated?)')\nfor tag in ('script', 'style', 'body', 'head'):\n    opens = text.count('<' + tag + '>') + text.count('<' + tag + ' ')\n    closes = text.count('</' + tag + '>')\n    if opens != closes: problems.append('unbalanced <' + tag + '> tags (%d open, %d close)' % (opens, closes))\nif problems:\n    print('HTML CHECK FAILED: ' + '; '.join(problems)); sys.exit(2)\n\" \"$f\";; esac; }",
+            "timeout": 15,
+            "statusMessage": "Checking HTML structure..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Reminder: if this session changed app features, update the README feature list in the same PR (CLAUDE.md rule).\"}'"
+          }
+        ]
+      }
+    ]
+  }
+}

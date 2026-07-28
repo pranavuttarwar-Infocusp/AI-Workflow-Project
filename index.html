@@ -104,6 +104,14 @@
   }
   .input-row button:hover { filter: brightness(1.12); }
 
+  .search-row { margin-bottom: 14px; }
+  .search-row input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 11px 16px; color: var(--text);
+    font-size: 14px; outline: none; transition: border-color 0.2s;
+  }
+  .search-row input:focus { border-color: var(--accent); }
+
   .filters { display: flex; gap: 8px; margin-bottom: 16px; }
   .filters button {
     background: var(--surface); border: 1px solid var(--border);
@@ -195,6 +203,10 @@
     <button id="addBtn">Add</button>
   </div>
 
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="🔍 Search tasks..." aria-label="Search tasks" />
+  </div>
+
   <div class="filters">
     <button data-filter="all" class="active">All</button>
     <button data-filter="pending">Pending</button>
@@ -211,6 +223,7 @@
   const STORAGE_KEY = "taskpulse.tasks";
   let tasks = [];
   let filter = "all";
+  let searchQuery = "";
 
   const seedTasks = [
     { id: 1, title: "Review the release checklist", priority: "high", done: false, dueDate: new Date().toISOString().slice(0, 10) },
@@ -236,7 +249,8 @@
     const list = document.getElementById("taskList");
     list.innerHTML = "";
     const visible = tasks.filter(t =>
-      filter === "all" ? true : filter === "done" ? t.done : !t.done
+      (filter === "all" ? true : filter === "done" ? t.done : !t.done) &&
+      t.title.toLowerCase().includes(searchQuery)
     );
     if (visible.length === 0) {
       list.innerHTML = '<div class="empty"><div class="icon">🎉</div>Nothing here — add a task above.</div>';
@@ -301,6 +315,13 @@
   document.getElementById("taskInput").addEventListener("keydown", e => {
     if (e.key === "Enter") addTask();
     if (e.key === "Escape") { e.target.value = ""; e.target.blur(); }
+  });
+  document.getElementById("searchInput").addEventListener("input", e => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    render();
+  });
+  document.getElementById("searchInput").addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.target.value = ""; searchQuery = ""; render(); e.target.blur(); }
   });
   document.querySelectorAll(".filters button").forEach(btn => {
     btn.onclick = () => {

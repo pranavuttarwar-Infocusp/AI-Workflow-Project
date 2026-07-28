@@ -14,6 +14,7 @@ no dependencies — the entire app lives in one HTML file.
 - ✅ Toggle done / pending with one click
 - 🗑️ Delete individual tasks, or **Clear completed** in one click
 - 🔍 Filter by All / Pending / Done
+- 🔎 Live search across task titles — case-insensitive, combines with the filters, <kbd>Esc</kbd> clears
 - 📊 Live stats: total, done, pending, completion rate + animated progress bar
 - 🌗 Light / dark theme toggle (persists across reloads)
 - ⌨️ Keyboard shortcuts: <kbd>Enter</kbd> adds a task, <kbd>Esc</kbd> clears the input

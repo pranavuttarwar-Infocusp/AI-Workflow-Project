@@ -9,9 +9,7 @@ no dependencies — the entire app lives in one HTML file.
 
 ## Features
 
-- ➕ Add tasks with a priority (High / Medium / Low) and an optional due date
-- 📅 Due-date badge on each task; a task is flagged **overdue only after its due date has passed** (due today = not overdue). Works whether the task is added via the Add button or the Enter key
-- 🔎 Live search across task titles — **case-insensitive**; clearing the search box immediately restores the full list
+- ➕ Add tasks with a priority (High / Medium / Low)
 - ✅ Toggle done / pending with one click
 - 🗑️ Delete individual tasks, or **Clear completed** in one click
 - 🔍 Filter by All / Pending / Done

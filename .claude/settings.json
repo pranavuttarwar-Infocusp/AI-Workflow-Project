@@ -1,13 +1,12 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
+    "defaultMode": "default",
     "allow": [
       "Read",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git branch *)",
-      "Bash(git checkout -b *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git pull *)",
@@ -17,14 +16,29 @@
       "Bash(open index.html)"
     ],
     "ask": [
+      "Edit",
+      "Write",
       "Bash(git checkout *)",
       "Bash(git push *)",
       "Bash(gh pr create *)",
-      "Bash(gh pr merge *)"
+      "Bash(gh pr merge *)",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_create_task",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_update_task",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_delete_task",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_create_list",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_create_list_in_folder",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_create_folder",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_create_comment",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_move_task",
+      "mcp__2524e66b-d0fd-4bad-b014-f7b70b682b4f__clickup_merge_tasks"
     ],
     "deny": [
       "Bash(rm -rf *)",
-      "Bash(git push --force *)"
+      "Bash(rm -fr *)",
+      "Bash(rm -r -f *)",
+      "Bash(rm -f -r *)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)"
     ]
   },
   "env": {

@@ -2,7 +2,7 @@
 description: Create a ClickUp bug task from a quick description of a TaskPulse issue. Classifies bug vs enhancement first, then writes a standardized task with prerequisites, repro steps, expected/actual results, build/device details, and attachments.
 ---
 
-# ClickUp Bug Report
+# QA Bug Report
 
 ## Input
 

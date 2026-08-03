@@ -244,6 +244,29 @@ Repo → Settings → Pages → Branch: main, folder: / (root) → Save
 → redeploys automatically on every merge to main
 ```
 
+### Claude GitHub App (@claude bot on issues and PRs) — setup flow
+Not yet installed in this POC (listed in Next Steps); the setup process is:
+
+1. Open a terminal in a clone of the repo and run `claude`, then type:
+   `/install-github-app`
+2. A guided wizard starts:
+   - Choose the repository to install on
+   - Authorize the **Claude GitHub App** in the browser window it opens
+   - Provide the AI credential: either reuse an existing Claude Pro/Max
+     subscription (OAuth token) or an Anthropic API key — stored as a repo
+     secret (`ANTHROPIC_API_KEY`), never in code
+3. The wizard opens a PR adding `.github/workflows/claude.yml` — review and merge it.
+4. Done. Total time ≈ 10–15 minutes.
+
+What it enables after setup:
+- Comment `@claude fix this` on an issue → Claude writes the fix and opens a PR
+- Comment `@claude review this` on a PR → Claude reviews the diff and leaves comments
+- Comment `@claude <any change request>` on a PR → Claude pushes to that PR's branch
+
+How it works: each `@claude` mention triggers a **GitHub Actions** run that executes
+Claude Code against the repo in GitHub's cloud — no laptop needed, and it follows the
+repo's CLAUDE.md rules just like a local session.
+
 ---
 
 ## 6. The Workflow in One Picture
@@ -287,7 +310,45 @@ Repo → Settings → Pages → Branch: main, folder: / (root) → Save
 
 ---
 
-## 8. Next Steps
+## 8. How to Replicate This in Your Project
+
+Anyone can rebuild this setup by combining this document (the process and the why)
+with this repository (the reference files to copy).
+
+### Prerequisites checklist
+- [ ] **Claude Code** installed (desktop app or CLI) and signed in
+- [ ] **git** installed (`git --version` works in a terminal)
+- [ ] **GitHub CLI** authenticated: run `gh auth login` once
+- [ ] A **GitHub account** with permission to create a repository
+- [ ] A **ClickUp account** (or your team's tracker) — connector enabled in your
+      Claude workspace (may require an admin request, see Section 5)
+
+### Replication steps
+1. **Create your repo** on GitHub (empty), clone it locally, open Claude Code in it.
+2. **Copy the reference files from this repo** as starting templates:
+   - `CLAUDE.md` → rewrite the rules for *your* project (structure, tech stack,
+     conventions). Keep the format: short root file + Hard Rules + Nested docs line.
+   - `docs/*.md` → replace with docs for your project's real modules.
+   - `.claude/settings.json` → keep the allow/ask/deny skeleton; adjust the
+     commands to your stack (e.g., `npm test` instead of `python3 -m http.server`).
+   - `.claude/skills/` → copy both skills and edit the project-specific parts
+     (file names to read, tracker to file into, output columns).
+3. **⚠️ The one thing that MUST change:** the ClickUp rules in settings.json contain
+   a connector ID (`mcp__<long-id>__clickup_*`) that is **specific to our workspace**.
+   Get your own ID by connecting ClickUp in your Claude workspace and asking Claude:
+   *"what is the tool name of the ClickUp create-task tool?"* — then replace the ID
+   in every rule.
+4. **Set up deployment** (optional, for web projects): Settings → Pages, per Section 5.
+5. **Work only through PRs** from day one — branch, push, PR, merge (Section 4, Phase 3).
+6. **Verify the guard rails**: in a fresh Claude session in the repo, ask Claude to
+   edit a file — it must prompt for permission. Ask it to create a ClickUp task —
+   it must prompt again. If either runs silently, re-check `.claude/settings.json`.
+
+**Rule of thumb:** the *structure* (files, tiers, workflow) transfers to any project
+unchanged; the *contents* (rules, commands, connector IDs, skill details) are always
+project-specific.
+
+## 9. Next Steps
 
 1. **Bug workflow**: reproduce the one known live bug ("Clear completed" button does
    nothing — its click handler is overwritten by the filter-pill handler), file it to

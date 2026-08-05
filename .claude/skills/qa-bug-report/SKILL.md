@@ -83,8 +83,9 @@ The user will provide a quick, informal description of the bug they found in Tas
    ```
 
 5. **Ask the user to confirm** the task details, then create it in ClickUp:
-   - List: ask the user which List to file it in if not already clear (use
-     `clickup_get_workspace_hierarchy` or `clickup_search` to help locate it)
+   - List: default to the **"List"** list in the **"AI Workflow Project"** space
+     (list_id `901616173181`) — all TaskPulse bugs are kept here. Only file elsewhere if
+     the user explicitly asks for a different List in that session.
    - Priority: based on the assessment in step 1
    - Tags: `bug` if step 0 confirmed a defect; `enhancement` if it's a net-new ask
    - Creating the task itself (`clickup_create_task`) requires user confirmation per

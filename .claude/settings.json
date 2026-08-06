@@ -52,7 +52,7 @@
           {
             "type": "command",
             "if": "Bash(gh pr create *)",
-            "command": "echo '{\"systemMessage\": \"🧪 QA GATE before this PR: 1) Loaded the app and exercised the changed flows? 2) Checked BOTH themes (☀️/🌙)? 3) Checked mobile width (375px)? 4) Refresh persistence still works? 5) README feature list updated? 6) Consider /qa-test-cases for the change.\"}'",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/qa-gate.sh",
             "statusMessage": "QA gate checklist..."
           }
         ]
@@ -64,7 +64,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "jq -r '.tool_input.file_path // .tool_response.filePath' | { read -r f; case \"$f\" in *.html) python3 -c \"\nimport sys\ntext = open(sys.argv[1]).read()\nproblems = []\nif not text.rstrip().endswith('</html>'): problems.append('file does not end with </html> (truncated?)')\nfor tag in ('script', 'style', 'body', 'head'):\n    opens = text.count('<' + tag + '>') + text.count('<' + tag + ' ')\n    closes = text.count('</' + tag + '>')\n    if opens != closes: problems.append('unbalanced <' + tag + '> tags (%d open, %d close)' % (opens, closes))\nif problems:\n    print('HTML CHECK FAILED: ' + '; '.join(problems)); sys.exit(2)\n\" \"$f\";; esac; }",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/html-check.py",
             "timeout": 15,
             "statusMessage": "Checking HTML structure..."
           }
@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"Reminder: if this session changed app features, update the README feature list in the same PR (CLAUDE.md rule).\"}'"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/readme-reminder.sh"
           }
         ]
       }

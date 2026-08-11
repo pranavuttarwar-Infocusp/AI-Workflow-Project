@@ -61,6 +61,15 @@
 - Changes go through **feature branch → PR → merge** — don't commit directly to `main`
 - Keep PRs small and single-purpose; describe the user-visible behavior in the PR body
 
+### ClickUp integration
+- Work driven by a ClickUp task must carry the **task ID** so ClickUp's GitHub
+  integration links the PR and its Automations can move the task's status:
+  - Branch name: `<type>/<task-id>-short-slug` (e.g. `feat/86d40enkv-remove-due-date`)
+  - PR title: append `(#<task-id>)` (e.g. `feat: remove due date field (#86d40enkv)`)
+  - PR body: include the full task URL (`https://app.clickup.com/t/<task-id>`)
+- Status flow is automated in ClickUp: PR opened → *in review*, PR merged → *done*.
+  Don't change these statuses manually when a PR exists.
+
 ### Documentation
 - Any user-visible feature change must update the README feature list in the same PR
 - New keyboard shortcuts must also be documented in the app footer

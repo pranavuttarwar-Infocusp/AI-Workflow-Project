@@ -90,13 +90,6 @@
     border-radius: var(--radius); padding: 0 12px; color: var(--text);
     font-size: 14px; outline: none; cursor: pointer;
   }
-  .input-row input[type="date"] {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 0 12px; color: var(--text);
-    font-size: 14px; outline: none;
-    color-scheme: dark;
-  }
-  body.light .input-row input[type="date"] { color-scheme: light; }
   .input-row button {
     background: var(--accent); border: none; border-radius: var(--radius);
     padding: 0 22px; color: #fff; font-size: 15px; font-weight: 600;
@@ -147,8 +140,6 @@
   .badge.high { background: rgba(240,122,122,0.15); color: var(--red); }
   .badge.medium { background: rgba(240,185,90,0.15); color: var(--amber); }
   .badge.low { background: rgba(76,212,138,0.15); color: var(--green); }
-  .badge.due { background: var(--accent-soft); color: var(--accent); text-transform: none; }
-  .badge.due.overdue { background: rgba(240,122,122,0.15); color: var(--red); }
   .task .del {
     background: none; border: none; color: var(--text-dim); cursor: pointer;
     font-size: 16px; padding: 4px; border-radius: 6px; transition: color 0.15s;
@@ -199,7 +190,6 @@
       <option value="medium" selected>Medium</option>
       <option value="low">Low</option>
     </select>
-    <input type="date" id="dueDateInput" aria-label="Due date" />
     <button id="addBtn">Add</button>
   </div>
 
@@ -226,16 +216,10 @@
   let searchQuery = "";
 
   const seedTasks = [
-    { id: 1, title: "Review the release checklist", priority: "high", done: false, dueDate: new Date().toISOString().slice(0, 10) },
-    { id: 2, title: "Write test cases for the new login flow", priority: "medium", done: true, dueDate: null },
-    { id: 3, title: "Update the team wiki", priority: "low", done: false, dueDate: null },
+    { id: 1, title: "Review the release checklist", priority: "high", done: false },
+    { id: 2, title: "Write test cases for the new login flow", priority: "medium", done: true },
+    { id: 3, title: "Update the team wiki", priority: "low", done: false },
   ];
-
-  // Local calendar date as YYYY-MM-DD (toISOString would shift the date near midnight in non-UTC timezones)
-  function todayStr() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  }
 
   function load() {
     try {
@@ -258,16 +242,9 @@
     for (const task of visible) {
       const li = document.createElement("li");
       li.className = "task" + (task.done ? " done" : "");
-      let dueBadge = "";
-      if (task.dueDate) {
-        const overdue = !task.done && task.dueDate < todayStr();
-        const label = new Date(task.dueDate + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
-        dueBadge = `<span class="badge due${overdue ? " overdue" : ""}">${overdue ? "⏰" : "📅"} ${label}</span>`;
-      }
       li.innerHTML = `
         <button class="check" aria-label="toggle">${task.done ? "✓" : ""}</button>
         <span class="title"></span>
-        ${dueBadge}
         <span class="badge ${task.priority}">${task.priority}</span>
         <button class="del" aria-label="delete">✕</button>`;
       li.querySelector(".title").textContent = task.title;
@@ -295,13 +272,11 @@
 
   function addTask() {
     const input = document.getElementById("taskInput");
-    const dueDateInput = document.getElementById("dueDateInput");
     const title = input.value.trim();
     if (!title) return;
     const priority = document.getElementById("prioritySelect").value;
-    tasks.unshift({ id: Date.now(), title, priority, done: false, dueDate: dueDateInput.value || null });
+    tasks.unshift({ id: Date.now(), title, priority, done: false });
     input.value = "";
-    dueDateInput.value = "";
     save();
     render();
   }

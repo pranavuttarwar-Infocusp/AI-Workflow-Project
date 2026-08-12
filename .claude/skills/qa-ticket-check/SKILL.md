@@ -1,5 +1,5 @@
 ---
-description: QA ticket hygiene check — scans ClickUp tickets in "testing" for missing acceptance criteria. Always asks the scan window first (last 24 hrs vs all tickets). For each bad ticket, posts a comment tagging the assigned developer and moves the status back to "in review". Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
+description: QA ticket hygiene check — scans ClickUp tickets in "testing" for missing acceptance criteria, missing PR/commit link, and missing sprint tag. Always asks the scan window first (last 24 hrs vs all tickets). For each bad ticket, posts a comment tagging the assigned developer and moves the status back to "in review"; repeat offenders are listed for review instead of re-commented. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
 ---
 
 # QA Ticket Check (Acceptance Criteria Police)
@@ -24,7 +24,7 @@ testable because acceptance criteria are missing.
    - Paginate until `has_more` is false — never stop at page one
    - If a time window was chosen, keep only tickets whose `date_updated` falls inside it
 
-3. **Check each ticket for TWO things.** Read the full task (`clickup_get_task`,
+3. **Check each ticket for THREE things.** Read the full task (`clickup_get_task`,
    include description) and its comments:
 
    **a) Acceptance criteria.** PRESENT only if the description has:
@@ -39,9 +39,14 @@ testable because acceptance criteria are missing.
    build/change to test = FAIL. Bounce it with a comment asking the developer to
    link the PR.
 
-4. **Report before acting.** Show the user a short table: ticket, assignee, verdict
-   (OK / missing AC / missing repo link / both / unsure). If nothing is missing,
-   say so and stop.
+   **c) Sprint tag.** A ticket in `testing` must carry a `sprint-<N>` tag
+   (convention shared with /qa-daily-report — without it the ticket is invisible
+   to sprint reports). No sprint tag = FAIL; the bounce comment asks for the
+   current sprint's tag to be added.
+
+4. **Report before acting.** Show the user a short table: ticket, assignee,
+   verdict listing whichever checks failed (AC / repo link / sprint tag / unsure).
+   If nothing is missing, say so and stop.
 
 5. **For each ticket missing criteria** (after the user confirms the list):
    - Post a comment via `clickup_create_comment`, assigning/tagging the ticket's
@@ -51,6 +56,8 @@ testable because acceptance criteria are missing.
      > <only the lines that apply>
      > • an **Acceptance Criteria** section (how do we know it's done?)
      > • a **link to the PR/commit** implementing it (QA doesn't know what to test)
+     > • the current **sprint tag** (`sprint-<N>`) — without it the ticket is
+     >   missing from sprint reports
      > Please add the missing piece(s) and move it back to `testing`.
      > Moving to `in review` until then. — automated QA ticket check
 

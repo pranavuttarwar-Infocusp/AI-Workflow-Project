@@ -1,11 +1,12 @@
 ---
-description: QA ticket hygiene check — scans ClickUp tickets in "testing" for missing acceptance criteria, missing PR/commit link, and missing sprint tag. Always asks the scan window first (last 24 hrs vs all tickets). For each bad ticket, posts a comment tagging the assigned developer and moves the status back to "in review"; repeat offenders are listed for review instead of re-commented. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
+description: QA ticket hygiene check — scans ClickUp tickets in "testing" for missing acceptance criteria (feature-tagged tickets only), missing PR/commit link, and missing sprint tag. Always asks the scan window first (last 24 hrs vs all tickets). For each bad ticket, posts a comment tagging the assigned developer and moves the status back to "in review"; repeat offenders are listed for review instead of re-commented. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
 ---
 
 # QA Ticket Check (Acceptance Criteria Police)
 
 Scans tickets that entered the QA stage and bounces back any that are not actually
-testable because acceptance criteria are missing.
+testable. The acceptance-criteria check applies only to tickets tagged `feature`;
+the repo-link and sprint-tag checks apply to every ticket in `testing`.
 
 **Optional user input:** $ARGUMENTS (may contain a window like "24h", "7d", or "all")
 
@@ -27,11 +28,13 @@ testable because acceptance criteria are missing.
 3. **Check each ticket for THREE things.** Read the full task (`clickup_get_task`,
    include description) and its comments:
 
-   **a) Acceptance criteria.** PRESENT only if the description has:
-   - An explicit "Acceptance Criteria" heading/section with at least one concrete item, OR
-   - For bugs: both "Expected Result" and repro steps (that is the testable contract)
-   Vague descriptions ("make it better", "needs polish") = MISSING. When genuinely
-   borderline, list it to the user as "unsure" instead of acting on it.
+   **a) Acceptance criteria — ONLY for tickets tagged `feature`.** Tickets in
+   `testing` WITHOUT the `feature` tag SKIP this check entirely (they still get
+   checks b and c). For a `feature`-tagged ticket, AC is PRESENT only if the
+   description has an explicit "Acceptance Criteria" heading/section with at
+   least one concrete item. Vague descriptions ("make it better", "needs
+   polish") = MISSING. When genuinely borderline, list it to the user as
+   "unsure" instead of acting on it.
 
    **b) Git repo link.** A ticket in `testing` must reference the code change that
    implements it: a GitHub PR or commit URL (e.g. `github.com/.../pull/N`) in the
@@ -54,7 +57,8 @@ testable because acceptance criteria are missing.
 
      > 👋 **QA check:** this ticket is in `testing` but is missing:
      > <only the lines that apply>
-     > • an **Acceptance Criteria** section (how do we know it's done?)
+     > • an **Acceptance Criteria** section (feature tickets only — how do we
+     >   know it's done?)
      > • a **link to the PR/commit** implementing it (QA doesn't know what to test)
      > • the current **sprint tag** (`sprint-<N>`) — without it the ticket is
      >   missing from sprint reports

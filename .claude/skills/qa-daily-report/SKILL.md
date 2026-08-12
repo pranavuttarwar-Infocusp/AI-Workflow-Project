@@ -26,13 +26,16 @@ tickets by hand.
   `in review`/`testing` WITHOUT a `sprint-<N>` tag is invisible to sprint
   reports — list such tickets under ⚠️ Flags ("in flight but not tagged to a
   sprint") so they get tagged.
-- **Destinations (post to BOTH, each behind its own approval):**
-  1. ClickUp comment on the current sprint list — the daily visibility ping
-  2. ClickUp Doc **"QA Daily Reports"** in the AI Workflow Project space —
-     append today's report under a dated heading, newest on top (create the doc
-     via `clickup_create_document` on first run if it doesn't exist, and record
-     its ID here: _not yet created — pending API quota reset_)
-  3. Slack: _(not configured — the team wants Infocusp Slack, which is not yet
+- **Destinations (each behind its own approval):**
+  1. ClickUp Doc **"QA Daily Reports — TaskPulse"** in the AI Workflow Project
+     space — ONE PAGE PER DAY: each run creates a new page titled
+     `YYYY-MM-DD (Weekday)` via `clickup_create_document_page` containing that
+     day's report. Create the doc itself via `clickup_create_document` on first
+     run if missing, and record its ID here:
+     _not yet created — pending API quota reset_.
+     If a page for today already exists (re-run), update that page
+     (`clickup_update_document_page`) instead of creating a duplicate.
+  2. Slack: _(not configured — the team wants Infocusp Slack, which is not yet
      authorized; add the channel ID here once connected)_
 - Report timezone: user's local (Asia/Kolkata)
 
@@ -80,12 +83,11 @@ tickets by hand.
 4. **Show the report in chat FIRST.** The user sees exactly what will be posted.
 
 5. **Post after approval** to whatever is configured in Configuration:
-   - ClickUp: `clickup_create_comment` with `entity_type: "list"` on the sprint
-     list (falls back to a comment on the sprint list's first view if list
-     comments are unsupported)
+   - ClickUp Doc: create/update today's dated page in the
+     "QA Daily Reports — TaskPulse" doc (see Configuration for the exact flow)
    - Slack (when configured): `slack_send_message` to the configured channel —
      sending a Slack message ALWAYS requires explicit user approval in chat
-   - Posting to both is fine; each write gets its own approval
+   - Each destination's write gets its own approval
 
 6. **Suggest scheduling** (once, not every run): when the user is happy with the
    format, offer to schedule this skill as a recurring weekday morning task so

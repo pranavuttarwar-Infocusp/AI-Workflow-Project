@@ -1,5 +1,5 @@
 ---
-description: Sprint-close quality report for the TaskPulse board — completed vs spillover, tickets reopened during testing (via status history), repeat bouncers, and bugs filed during the sprint. Shows the report in chat first, then posts it to a ClickUp doc page after user approval. Triggers on "/qa-sprint-report", "sprint quality report", "sprint review report", "sprint reopen report".
+description: Sprint-close quality report for the TaskPulse board — completed vs spillover, tickets reopened during testing (via status history), repeat bouncers, and bugs filed during the sprint. Renders the report in chat only — it is never posted to ClickUp. Triggers on "/qa-sprint-report", "sprint quality report", "sprint review report", "sprint reopen report".
 ---
 
 # QA Sprint Report
@@ -33,14 +33,13 @@ default = resolve the current sprint automatically)
 - **Spillover definition:** any ticket carrying the sprint tag whose current
   status is not `done`/`Closed` at report time. Carrying it forward = adding the
   next sprint's tag (the report suggests this; it never re-tags by itself).
-- **Destination (behind approval):** ClickUp Doc
-  **"QA Sprint Reports — TaskPulse"** in the AI Workflow Project space — ONE
-  PAGE PER SPRINT: each run creates a page titled `Sprint <N> (<start> – <end>)`
-  via `clickup_create_document_page`. Create the doc itself via
-  `clickup_create_document` on first run if missing, and record its ID here:
-  _not yet created_.
-  If the sprint's page already exists (re-run), update it with
-  `clickup_update_document_page` instead of creating a duplicate.
+- **Destination: CHAT ONLY.** This report is rendered in the conversation and
+  nowhere else. Do NOT create a ClickUp doc, do NOT create or update a doc page,
+  do NOT post it as a comment — no `clickup_create_document`,
+  `clickup_create_document_page` or `clickup_update_document_page` for this
+  skill. If the user later wants it persisted, they will say so explicitly and
+  name the destination; never infer one, and never fall back to the daily
+  report's doc.
 - Report timezone: user's local (Asia/Kolkata)
 
 ## Steps
@@ -104,22 +103,26 @@ default = resolve the current sprint automatically)
    in step 1 — no extra API calls. Truncate a long title to ~60 characters with
    an ellipsis rather than dropping it or wrapping the line.
 
-6. **Show the report in chat FIRST.** The user sees exactly what will be
-   posted.
+6. **Show the report in chat. That is the whole output** — the run ends here.
+   Nothing is written to ClickUp: no doc, no page, no comment. Do not offer to
+   post it, and do not ask where to put it.
 
-7. **Post after approval** to the ClickUp doc per Configuration. If the user
-   approves re-tagging spillover tickets to the next sprint, do that as a
-   separate, second approval — never bundle it with the post.
+7. **Optional, only if the user explicitly asks:** re-tag spillover tickets to
+   the next sprint. This is the one action that writes to ClickUp, it is never
+   bundled with the report, and it needs its own clear approval naming the
+   tickets. The report on its own never re-tags anything.
 
 8. **Suggest scheduling** (once, not every run): when the user is happy with
    the format, offer to schedule this skill to run at sprint close (Friday
-   evening) hands-free (Phase 5 of the rollout plan).
+   evening). A scheduled run still just renders the report — if the user wants
+   scheduled output to land somewhere durable, they must choose that
+   destination at that point.
 
 ## Important
 
-- Read-only except the final post (and the optional, separately-approved
-  spillover re-tag) — the report itself never changes ticket state.
-- Show before send, every time. No silent posting, even when scheduled.
+- **Fully read-only.** The only write this skill can ever make is the optional
+  spillover re-tag in step 7, and only when the user explicitly asks for it.
+  The report itself never changes ticket state and is never persisted anywhere.
 - Budget API calls: one filtered fetch + one bulk time-in-status call is the
   target. No per-ticket reads unless a specific ticket needs a detail.
 - If the ClickUp API rate limit blocks a step, report that plainly and stop —

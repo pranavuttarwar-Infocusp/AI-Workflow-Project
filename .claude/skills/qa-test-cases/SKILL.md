@@ -12,6 +12,27 @@ Never assume a filename, framework or stack.
 **User's input:** $ARGUMENTS — may be empty, or may name a feature, path, branch,
 commit range, ticket or PR. Only the repo is required; anything else is a bonus.
 
+## Step 0 — One look, then decide what to skip
+
+Run this once. Do not use separate commands to discover these facts.
+
+```bash
+ls -A && git rev-parse --abbrev-ref HEAD 2>/dev/null && git status --porcelain 2>/dev/null | head -20
+```
+
+The output tells you what exists. Apply these skips — they save most of the work:
+
+| Not there | Skip |
+|---|---|
+| No `README`, no `AGENTS.md`/`CLAUDE.md`, no docs | Step 3 rungs 1–2 → read code, say so in the output |
+| No git | Step 2's diff options and Step 3's churn rung → ask for scope |
+| No test folder | Step 5 gate 3 and the Coverage Gaps section → note "no tests found" |
+| One app, no manifests in subfolders | the monorepo question in Step 1 |
+
+**Read budget: at most 12 files.** Read only the sections that matter, never a
+whole large file, never the same file twice. Skip `node_modules`, `vendor`,
+`dist`, `build`, `.venv`. Never read `.env` or put credentials in the output.
+
 ## Step 1 — Check before you start
 
 Look first. Only ask about what you genuinely cannot find yourself.
@@ -57,9 +78,6 @@ Cheapest first. Stop when you know enough.
 5. Existing tests — their style, and what they already cover
 6. **The code itself — always available, so this always works**
 7. `git log -10 -- <scoped paths>` — recent changes mark risk
-
-Skip `node_modules`, `vendor`, `dist`, `build`, `.venv`. Never read `.env` or put
-credentials in the output.
 
 ## Step 4 — Cover these 12 things
 

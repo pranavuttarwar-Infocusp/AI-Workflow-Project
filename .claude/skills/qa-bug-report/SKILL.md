@@ -15,27 +15,6 @@ File a ticket only if a tracker is connected and the user confirms.
 **User's description:** $ARGUMENTS — e.g. "theme toggle resets to dark after
 refresh even though I picked light".
 
-## Step 0 — One look, then decide what to skip
-
-Run this once. Do not use separate commands to discover these facts.
-
-```bash
-ls -A && git rev-parse --abbrev-ref HEAD 2>/dev/null && git log --oneline -5 2>/dev/null
-```
-
-The output tells you what exists. Apply these skips — they save most of the work:
-
-| Not there | Skip |
-|---|---|
-| No `README`, no `AGENTS.md`/`CLAUDE.md`, no docs folder | Step 2's doc ladder → classify from code, mark unverified |
-| No git | Step 3's history check |
-| No test folder | the "should a test have caught this" check |
-| No tracker tool available | Step 5 modes 2 and 3 → markdown only, never mention ticketing |
-
-**Read budget: at most 8 files.** Read only the sections that matter, never a
-whole large file. Never read the same file twice. Skip `node_modules`, `vendor`,
-`dist`, `build`, `.venv`. Never read `.env` or put credentials in the report.
-
 ## Step 1 — Fill the gaps
 
 From the description, pull out: what happened, what should have happened, feature
@@ -77,6 +56,9 @@ Never silently file a bug for something with no documented behaviour behind it.
 
 Cite the `file:line` you believe is responsible. Can't find it? Say so rather than
 guessing a cause.
+
+Ignore third-party and build folders (`node_modules`, `vendor`, `dist`, `build`,
+`.venv`). Never read `.env` or put credentials in the report.
 
 ## Step 4 — Draft the report
 

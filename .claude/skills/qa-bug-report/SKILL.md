@@ -1,104 +1,152 @@
 ---
-description: Create a ClickUp bug task from a quick description of a TaskPulse issue. Classifies bug vs enhancement first, then writes a standardized task with prerequisites, repro steps, expected/actual results, build/device details, and attachments.
+description: Turn a rough bug description into a proper bug report for any project — prerequisites, repro steps, expected vs actual, environment details. Classifies bug vs enhancement first by checking the code and docs. Works with no tracker at all (renders markdown to copy); files the ticket only if a tracker is connected and you confirm. Triggers on "/qa-bug-report", "file a bug", "write up this bug", "raise a ticket for this issue".
 ---
 
-# QA Bug Report
+# Bug Report
 
-## Input
+Turn a rough description into a report a developer can act on.
 
-The user will provide a quick, informal description of the bug they found in TaskPulse. It may be brief or detailed. Example:
-- "theme toggle resets to dark mode after refresh even though I picked light"
-- "adding a task with an empty title still creates a blank task card"
+**Rule:** nothing about the project is hardcoded here. Look it up in the repo.
+Never assume a filename, framework or stack.
 
-**User's description:** $ARGUMENTS
+**A tracker is optional.** Default output is markdown the user can paste anywhere.
+File a ticket only if a tracker is connected and the user confirms.
 
-## Steps
+**User's description:** $ARGUMENTS — e.g. "theme toggle resets to dark after
+refresh even though I picked light".
 
-0. **Classify first — bug or enhancement?** Before drafting anything, decide whether this is
-   an actual **defect** (behavior contradicts documented/expected behavior) or an
-   **enhancement / suggestion** (a net-new ask that was never specified). Check against:
-   - The README feature list (the public contract for what TaskPulse does)
-   - The relevant `docs/*.md` module doc (`ui-layout`, `state-storage`, `rendering`,
-     `theming`, `interactions`)
-   - The current behavior in `index.html`
-   - If it clearly **contradicts documented behavior** → it's a Bug. Continue below.
-   - If **no documented behavior backs the expectation**, or it asks for something beyond
-     what's specified → it's likely an **Enhancement**. **Tell the user plainly:**
-     *"This reads as an enhancement, not a defect — I couldn't find documented behavior it
-     violates. File it as an Enhancement, or should I dig deeper?"* Do NOT silently create a
-     Bug task. Only proceed once the user confirms bug vs. enhancement, and set the task
-     tag/type accordingly.
+## Step 0 — One look, then decide what to skip
 
-1. **Parse the description** and identify:
-   - What happened (actual result)
-   - What should have happened (expected result)
-   - Feature area (Tasks, Filters, Stats, Theme, Search, Shortcuts, Storage, etc.)
-   - Likely priority (Urgent/High/Normal/Low)
-   - Any build/browser/device details mentioned
+Run this once. Do not use separate commands to discover these facts.
 
-2. **Check the code** to understand the feature area:
-   - Read the relevant markup/CSS/JS section in `index.html` for the feature
-   - Check the matching `docs/*.md` module doc for documented expected behavior
-   - Note any recent changes to that area (`git log --oneline -10 -- index.html`)
+```bash
+ls -A && git rev-parse --abbrev-ref HEAD 2>/dev/null && git log --oneline -5 2>/dev/null
+```
 
-3. **Check ClickUp for duplicates**:
-   - Use `clickup_search` or `clickup_filter_tasks` for similar existing tasks using
-     relevant keywords
-   - If potential duplicates are found, list them and ask the user before creating a new one
+The output tells you what exists. Apply these skips — they save most of the work:
 
-4. **Draft the task** with this structure:
+| Not there | Skip |
+|---|---|
+| No `README`, no `AGENTS.md`/`CLAUDE.md`, no docs folder | Step 2's doc ladder → classify from code, mark unverified |
+| No git | Step 3's history check |
+| No test folder | the "should a test have caught this" check |
+| No tracker tool available | Step 5 modes 2 and 3 → markdown only, never mention ticketing |
 
-   **Title**: `[Area] Short descriptive title`
+**Read budget: at most 8 files.** Read only the sections that matter, never a
+whole large file. Never read the same file twice. Skip `node_modules`, `vendor`,
+`dist`, `build`, `.venv`. Never read `.env` or put credentials in the report.
 
-   **Description** (markdown):
-   ```
-   ## Prerequisites
-   - <Starting state needed to reproduce, e.g. "fresh localStorage, light theme, 3 tasks (1 done)">
+## Step 1 — Fill the gaps
 
-   ## Repro Steps
-   1. <Step 1>
-   2. <Step 2>
-   3. ...
+From the description, pull out: what happened, what should have happened, feature
+area, likely priority, any environment details given.
 
-   ## Actual Result
-   <What actually happens>
+**Stop and ask if:**
+- Too vague to reproduce → ask what they did, step by step
+- You cannot tell what "should have happened" → ask what they expected
 
-   ## Expected Result
-   <What should happen instead>
+**Ask but continue anyway if:**
+- Environment unknown → "Which browser / device / OS?" (else `Not provided`)
+- Feature area or severity unclear → propose your guess to confirm
 
-   ## Build and Device Details
-   - Browser + version: <ask if not provided>
-   - OS: <ask if not provided>
-   - Screen size / viewport: <ask if not provided, especially for responsive issues>
-   - Build/commit: <current commit hash if known>
+Max 4 questions, one message, defaults where possible. Never re-ask.
 
-   ## Attachment
-   <Leave blank — reporter/QA will attach screenshots, screen recordings, or console logs manually>
+## Step 2 — Bug or enhancement? Decide before drafting
 
-   ## Test Plan Link
-   <Link to the relevant test suite/case if one exists, e.g. from the qa-test-cases skill — otherwise omit this section>
+- **Bug** — contradicts documented or clearly intended behaviour
+- **Enhancement** — a net-new ask that was never specified
 
-   ## Note for Developer
-   <Any special context: suspected root cause, related code area, workaround in place — omit this section if nothing to add>
-   ```
+Check the expectation against the first of these that exists:
+`AGENTS.md`/`CLAUDE.md` → `README` → docs folder → existing tests → the code.
 
-5. **Ask the user to confirm** the task details, then create it in ClickUp:
-   - List: ask the user which List to file it in if not already clear (use
-     `clickup_get_workspace_hierarchy` or `clickup_search` to help locate it)
-   - Priority: based on the assessment in step 1
-   - Tags: `bug` if step 0 confirmed a defect; `enhancement` if it's a net-new ask
-   - Creating the task itself (`clickup_create_task`) requires user confirmation per
-     `.claude/settings.json` ask rules — never skip this
+- **Contradicts documented behaviour** → Bug. Cite what it violates.
+- **Nothing documented backs it** → stop and say: *"This reads as an enhancement —
+  I couldn't find documented behaviour it violates. File as enhancement, or dig
+  deeper?"*
+- **No documentation exists at all** → *"No documented expected behaviour found.
+  Classified from code alone — please confirm."*
 
-## Important
-- **Classify bug vs enhancement (step 0) before drafting** — never auto-file a "Bug" for
-  something with no documented behavior behind it. Set the tag to match the verdict.
-- Always ask the user to confirm before creating the task
-- If the description is too vague, ask clarifying questions FIRST (especially build/device
-  details and repro steps — these are required fields, not optional)
-- Check for duplicates before creating
-- Keep the artifact list exactly as above: Title, Prerequisites, Repro Steps, Actual Result,
-  Expected Result, Build and Device Details, Attachment, Test Plan Link (if applicable),
-  Note for Developer (if applicable)
-- Omit "Test Plan Link" and "Note for Developer" sections entirely when not applicable —
-  don't leave placeholder text in the final task
+Never silently file a bug for something with no documented behaviour behind it.
+
+## Step 3 — Confirm it in the code
+
+1. Find the feature's code — handlers, components, routes
+2. Read only the part that produces the reported behaviour
+3. `git log -5 -- <those paths>` — recent changes are the likely cause
+4. Is there a test that should have caught this?
+
+Cite the `file:line` you believe is responsible. Can't find it? Say so rather than
+guessing a cause.
+
+## Step 4 — Draft the report
+
+**Title:** `[Area] Short descriptive title`
+
+```
+## Prerequisites
+- <starting state needed to reproduce>
+
+## Repro Steps
+1. <step>
+2. <step>
+
+## Actual Result
+<what happens>
+
+## Expected Result
+<what should happen, and what says so — README, doc, test or ticket>
+
+## Environment Details
+- Platform / browser / device: <or "Not provided">
+- OS + version: <or "Not provided">
+- Screen size: <only for visual or responsive issues>
+- Build / commit: <current commit if known>
+
+## Attachment
+<Leave blank — the reporter attaches screenshots, recordings or logs>
+
+## Test Plan Link
+<Link to the relevant test case if one exists — otherwise omit>
+
+## Note for Developer
+<Suspected cause with file:line, related code, workaround — otherwise omit>
+```
+
+- **Repro steps concrete.** "Click Add with an empty title" — not "try adding a task".
+- **Expected Result names its source.** Nothing documents it? Say "undocumented —
+  assumed from code".
+- **Environment fields adapt.** A CLI has no browser; an API has no screen size.
+- **Omit `Test Plan Link` and `Note for Developer` entirely** when empty. No
+  placeholder text.
+
+## Step 5 — Deliver it
+
+Print one line of context first, so a wrong guess is obvious:
+
+> _Bug · violates README "theme choice persists" · likely cause `app.js:212`,
+> changed 3 days ago_
+
+**No tracker tool available** — show the markdown, done. Never mention ticketing.
+
+**Tracker available:**
+1. Search for duplicates by keyword. Found some? List them and ask first.
+2. Pick the destination **by name, never an ID** — list options, let the user
+   choose a number. Only one? Use it.
+3. Read that destination's real fields, statuses and priorities before building the
+   payload. Watch for required custom fields.
+4. Show the draft and **ask for confirmation.**
+5. Only then create it, tagged to match the Step 2 verdict.
+
+**Creation fails** (no permission, missing field) — fall back to markdown and say
+what blocked it.
+
+Never create a ticket without explicit confirmation in this conversation.
+
+## Limits
+
+- Say what you couldn't find: *"No README or tests — expected behaviour inferred
+  from code only, confirm before filing"*
+- You compare what the code **does** against what the docs **say**. If the
+  expectation looks like an unwritten rule, flag it for a human decision rather
+  than filing it as a defect
+- You read code, you don't run it. A suspected cause is a lead, not a diagnosis

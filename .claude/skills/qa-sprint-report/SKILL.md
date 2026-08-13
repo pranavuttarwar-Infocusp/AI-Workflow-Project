@@ -15,10 +15,13 @@ default = resolve the current sprint automatically)
 
 - **Space:** `AI Workflow Project` (space_id `90167656011`)
 - **Sprint — how the sprint is determined:** sprints are TAGS, not list names.
-  Every ticket in a sprint carries a tag following the convention `sprint-<N>`
-  (e.g. `sprint-1`, `sprint-2`).
-  1. If $ARGUMENTS names a sprint tag, use it.
-  2. Otherwise collect all `sprint-<N>` tags present on the board's tickets and
+  Every ticket in a sprint carries a tag naming the sprint number, normally
+  written `sprint-1`, `sprint-2`. Match it LOOSELY: treat any tag matching
+  `sprint[ -]?<N>` case-insensitively as sprint N, so a hand-typed `sprint 1`
+  with a space still resolves. Matching the exact literal instead makes a board
+  using the other spelling report an empty sprint with no error.
+  1. If $ARGUMENTS names a sprint tag, use it (match it the same loose way).
+  2. Otherwise collect all sprint tags present on the board's tickets and
      use the highest N (= the current sprint).
   3. On an interactive run, confirm the resolved tag with the user before the
      heavy per-ticket work. On a scheduled run, never ask — resolve and state

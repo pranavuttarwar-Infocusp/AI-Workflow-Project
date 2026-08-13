@@ -42,10 +42,13 @@ the repo-link and sprint-tag checks apply to every ticket in `testing`.
    build/change to test = FAIL. Bounce it with a comment asking the developer to
    link the PR.
 
-   **c) Sprint tag.** A ticket in `testing` must carry a `sprint-<N>` tag
-   (convention shared with /qa-daily-report — without it the ticket is invisible
-   to sprint reports). No sprint tag = FAIL; the bounce comment asks for the
-   current sprint's tag to be added.
+   **c) Sprint tag.** A ticket in `testing` must carry a sprint tag, normally
+   written `sprint-<N>` (convention shared with /qa-daily-report — without it the
+   ticket is invisible to sprint reports). Match it LOOSELY — any tag matching
+   `sprint[ -]?<N>` case-insensitively counts, so a hand-typed `sprint 1` with a
+   space is NOT bounced. This check moves tickets backward to `in review`, so a
+   too-strict match would bounce correctly-tagged work. No sprint tag at all =
+   FAIL; the bounce comment asks for the current sprint's tag to be added.
 
 4. **Report before acting.** Show the user a short table: ticket, assignee,
    verdict listing whichever checks failed (AC / repo link / sprint tag / unsure).

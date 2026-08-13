@@ -52,15 +52,21 @@ default = resolve the current sprint automatically)
 
 2. **Split completed vs spillover** from current status:
    - `done` / `Closed` → completed
-   - anything else → spillover (list each with status and assignee)
+   - anything else → spillover (list each with TITLE, status and assignee)
+   Keep each ticket's title from the step 1 fetch alongside its ID from here on
+   — every list in this report is read by a human who needs to know which
+   ticket it is without opening ClickUp.
 
 3. **Detect reopens via status history.** Call
    `clickup_get_bulk_tasks_time_in_status` for the sprint's ticket IDs (bulk —
    one call for many tickets; batch if the sprint is large; the API rate limit
    is tight). For each ticket, walk the status-history order and count
-   backward moves out of `testing` per the Reopen definition above. Record:
-   - reopened tickets (with bounce count and assignee)
-   - repeat bouncers (2+ bounces)
+   backward moves out of `testing` per the Reopen definition above. The bulk
+   call returns IDs only — join its results back to the titles from step 1 so
+   the reopen and bouncer lists carry titles, not bare IDs. Record:
+   - reopened tickets (with title, bounce count and assignee)
+   - repeat bouncers (2+ bounces) — the list most likely to be acted on, so
+     titles matter most here
    - any pattern worth a human sentence (e.g. both reopens on one feature)
    If the bulk history call is unavailable or rate-limited, say so in the
    report and mark the reopen section "no data" — never infer reopens from
@@ -78,14 +84,25 @@ default = resolve the current sprint automatically)
    🏁 QA Sprint Report — sprint-<N> (<DD Mon> – <DD Mon YYYY>)
 
    Scope: N tickets · ✅ done N · 📦 spillover N
-   🔁 Reopened in testing: N <ticket links + assignees, "none" if 0>
-   🔥 Repeat bouncers (2+): N <links, or "none">
+   🔁 Reopened in testing: N ("none" if 0; one line each)
+      <ID> — <title> — <assignee> — <N> bounce(s)
+   🔥 Repeat bouncers (2+): N ("none" if 0; one line each)
+      <ID> — <title> — <assignee> — <N> bounces
    🐞 Bugs filed this sprint: N
-   📦 Spillover → next sprint: <ticket links + current status, or "none">
+   📦 Spillover → next sprint: N ("none" if 0; one line each)
+      <ID> — <title> — <current status> — <assignee>
 
    Quality line: <one plain sentence a manager can read, e.g.
    "14 tickets, 11 done, 3 spill over; 2 reopens, both on the login feature.">
    ```
+
+   **ALWAYS print the ticket TITLE next to the ID — never a bare ID.** A tester
+   reading `86d40ecg7` has to go look it up; `86d40ecg7 — Improve search` they
+   can act on immediately. This applies to every ticket mentioned anywhere in
+   the report, including the Quality line, which should name features in words
+   ("both reopens on the search feature"), not IDs. Titles come from the fetch
+   in step 1 — no extra API calls. Truncate a long title to ~60 characters with
+   an ellipsis rather than dropping it or wrapping the line.
 
 6. **Show the report in chat FIRST.** The user sees exactly what will be
    posted.
@@ -107,7 +124,10 @@ default = resolve the current sprint automatically)
   target. No per-ticket reads unless a specific ticket needs a detail.
 - If the ClickUp API rate limit blocks a step, report that plainly and stop —
   never fabricate counts or present stale/partial data as complete.
-- Keep the report under ~15 lines; the "Quality line" is the part the manager
+- Ticket titles are never dropped to save space — a bare ID costs the reader a
+  ClickUp lookup, which defeats the point of the report. If a section runs long,
+  cut the number of tickets listed (with "+N more") rather than their titles.
+- Keep the report to ~20 lines; the "Quality line" is the part the manager
   actually reads — make it concrete, not generic.
 - Sample/test tickets on the board are fake; if the sprint contains known
   sample tickets, count them but mark them so the numbers aren't misread.

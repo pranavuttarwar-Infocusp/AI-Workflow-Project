@@ -85,7 +85,11 @@ tickets by hand.
      had to guess. Cost scales with the board: this keeps a 100-ticket board at
      roughly a dozen calls instead of 101.
 
-2. **Compute the numbers** (all derived from the fetched tasks — never guess):
+2. **Compute the numbers** (all derived from the fetched tasks — never guess).
+   **Whenever a ticket is named anywhere in the report, print its TITLE next to
+   the ID** — a bare `86d40ecg7` forces the reader into ClickUp to find out what
+   it is. Titles come from the fetch in step 1, so they cost nothing. Truncate
+   past ~60 characters with an ellipsis:
    - **Board snapshot:** count of tickets per status (backlog / to do /
      in progress / in review / testing / done / Closed)
    - **Filed today:** `date_created` = report date, from the newest-end probe
@@ -136,18 +140,19 @@ tickets by hand.
 
    Board: backlog N · to do N · in progress N · in review N · testing N · done N
 
-   🆕 Filed today: N <(links if 1–3, count only if more)>
+   🆕 Filed today: N <ID — title each if 1–3, count only if more>
    🧪 In testing: N (entered today: N)
    ✅ Closed today: N
-   🚫 Blocked: N <assignees>
+   🚫 Blocked: N <ID — title — assignee each>
    🔥 Open by priority: urgent N · high N · normal N · low N · unset N
       <one line per urgent/high ticket: ID — title — assignee — status>
    📈 Sprint-wise: sprint-1 N open / N done · sprint-2 N open / N done
       (one entry per sprint tag that still has OPEN tickets — fully closed
       sprints drop off; leftovers from old sprints are the signal here)
    🔀 Merged today: N <ticket ID + one-line summary each, or "no merges">
-   ⚠️ Flags: <unassigned-in-flight tickets, or "none">
-   💡 Watch: <insight bullets from step 4 — omit the line if there are none>
+   ⚠️ Flags: <ID — title — what's missing, per ticket; or "none">
+   💡 Watch: <insight bullets from step 4, each naming ID — title;
+      omit the line if there are none>
 
    Yesterday vs today: testing N→N, done N→N   (only if prior data available)
    ```
@@ -180,6 +185,9 @@ tickets by hand.
 - Keep the report under ~20 lines — a summary nobody reads is worse than none.
   The optional sections (merges, insights) are the first things to cut when it
   runs long; the counts and the urgent/high list never get cut.
+- Never drop a ticket's title to save a line. If a list runs long, show fewer
+  tickets and add "+N more" — a bare ID makes the reader open ClickUp, which is
+  exactly the manual step this report exists to remove.
 - Insights are observations, not conclusions. Say "3 of this week's tickets are
   on the filter UI" — do not diagnose why, and never guess at a cause the data
   does not show.

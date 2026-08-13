@@ -35,11 +35,15 @@ tickets by hand.
   1. ClickUp Doc **"QA Daily Reports — TaskPulse"** in the AI Workflow Project
      space — ONE PAGE PER DAY: each run creates a new page titled
      `YYYY-MM-DD (Weekday)` via `clickup_create_document_page` containing that
-     day's report. Create the doc itself via `clickup_create_document` on first
-     run if missing, and record its ID here:
-     _not yet created — pending API quota reset_.
-     If a page for today already exists (re-run), update that page
-     (`clickup_update_document_page`) instead of creating a duplicate.
+     day's report. The doc EXISTS — do not create another one:
+     **document_id `2kz0xde9-556`** (workspace `90161722825`), at
+     https://app.clickup.com/90161722825/docs/2kz0xde9-556
+     Before writing, call `clickup_list_document_pages` on that ID and look for a
+     page whose name is today's `YYYY-MM-DD (Weekday)`. If it exists (a re-run),
+     UPDATE it with `clickup_update_document_page`; only call
+     `clickup_create_document_page` when today has no page yet. Never call
+     `clickup_create_document` — a second doc with the same name would split the
+     history silently.
   2. Slack: _(not configured — the team wants Infocusp Slack, which is not yet
      authorized; add the channel ID here once connected)_
 - Report timezone: user's local (Asia/Kolkata)

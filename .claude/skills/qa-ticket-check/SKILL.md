@@ -1,13 +1,15 @@
 ---
-description: QA ticket hygiene check — scans ClickUp tickets in "testing" and splits them by the `feature` tag. Non-feature tickets get the standard checks (PR/commit link, sprint tag). Feature tickets are audited for acceptance criteria and a PR link; a ticket with EITHER one gets core test cases generated and posted as a "QA test cases" comment after approval, while a ticket with NEITHER is bounced to "in review". Always asks the scan window first. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
+description: QA ticket hygiene check — scans ClickUp tickets in "testing" and splits them by the `feature` tag. Non-feature tickets get the standard checks (PR/commit link, sprint tag). Feature tickets are audited for acceptance criteria and a PR link; a ticket with EITHER one gets core test cases generated ONCE and posted as a "QA test cases" comment after approval, while a ticket with NEITHER is bounced to "in review". A ticket that already has its suite is skipped on later runs, so a daily run never re-posts. Always asks the scan window first. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
 ---
 
 # QA Ticket Check (Acceptance Criteria Police)
 
 Scans tickets that entered the QA stage and bounces back any that are not actually
 testable. Tickets tagged `feature` are audited for testable source material and, when they
-have it, get core test cases generated and posted for them — this generation step runs on
-EVERY run of this skill, not on request. Everything else gets the standard hygiene checks.
+have it, get core test cases generated and posted for them without being asked — but only
+**once per ticket**. A feature ticket that already carries its `QA test cases` comment is
+recognised and skipped, so a ticket parked in `testing` for weeks is covered on the first
+run and silent on every run after. Everything else gets the standard hygiene checks.
 
 **Optional user input:** $ARGUMENTS (may contain a window like "24h", "7d", or "all",
 or a specific ticket ID)
@@ -28,7 +30,9 @@ or a specific ticket ID)
    - If a time window was chosen, keep only tickets whose `date_updated` falls inside it
 
 3. **Split every ticket by the `feature` tag.** Read the full task
-   (`clickup_get_task`, include description) and its comments, then route it:
+   (`clickup_get_task`, include description) and its comments
+   (`clickup_get_task_comments` — you need them for step 5a, so fetch them here rather
+   than twice), then route it:
    - **No `feature` tag** → standard flow, step 4
    - **Has `feature` tag** → feature audit, step 5
 
@@ -56,6 +60,32 @@ Failures here are bounced per step 7 (Path A).
 
 ### 5. Feature audit (tickets WITH the `feature` tag)
 
+#### 5a. First: has this ticket already been covered?
+
+**Check this BEFORE anything else, and before generating a single row.** The posted
+comment is the record — there is no state file to keep, and none should be added: both QA
+engineers run this skill, and only ClickUp is shared between them.
+
+Scan the comments fetched in step 3 for one starting with `QA test cases`:
+
+   - **No such comment** → this ticket has never been covered. Continue to 5b.
+   - **Comment exists, and the ticket's PR/commit link is the same one the comment was
+     generated from** → **Path C: skip silently.** Do not read the diff, do not draft a
+     matrix, do not ask the user anything. Report it in step 6 as
+     `✅ cases already posted` and move on. This is the normal outcome for any feature
+     ticket that has been sitting in `testing` since a previous run.
+   - **Comment exists, but the ticket now carries a PR/commit link that is not the one in
+     the posted comment** → **Path C-changed.** Still post nothing automatically. List the
+     ticket in step 6 under **"⚠️ Cases posted, but the PR has changed since"** with both
+     links, and ask once whether to draft a refreshed suite. Only if the user says yes does
+     it go to Path B, and the new comment must say it supersedes the earlier one.
+
+Rationale: strict once-ever would leave QA testing an outdated suite after a developer
+pushes a new PR to the same ticket. Keying on the PR link means the skill stays quiet on
+every ordinary day and speaks up only when the thing under test actually changed.
+
+#### 5b. Then: is there anything to generate from?
+
 **The eligibility rule is AC *or* PR — either one is enough.** Test cases can be written
 from acceptance criteria alone, from a code diff alone, or from both. Requiring both would
 bounce tickets that are perfectly testable, so don't.
@@ -69,9 +99,9 @@ Look for these two **source-material** items:
    2. **PR / commit link** — a GitHub PR or commit URL in the description, a comment, or a
       task link.
 
-   Routing:
+   Routing (only reached when 5a found no existing suite):
    - **At least one present → Path B** (step 8): generate test cases. This is the normal
-     outcome for a feature ticket and happens on every run.
+     outcome the first time a feature ticket is seen.
    - **Neither present → Path A** (step 7): there is nothing to generate from and nothing
      for QA to test, so bounce to `in review`. That ticket's flow ends there.
 
@@ -98,14 +128,20 @@ Show the user one short table covering everything scanned:
 
 - Link tickets by **name**, not bare ID
 - Verdict lists whichever checks failed (AC / PR link / sprint tag / unsure), or
-  "✅ eligible" for a feature ticket heading to Path B; add any ⚠️ warnings (test env,
-  build details, sprint tag) as a separate note rather than a failure
+  "✅ eligible" for a feature ticket heading to Path B, or "✅ cases already posted" for a
+  Path C skip; add any ⚠️ warnings (test env, build details, sprint tag) as a separate note
+  rather than a failure
+- **Always list Path C skips in the table** — never omit them. A ticket that silently
+  disappears from the report reads as "it left `testing`", which is a different and much
+  more alarming thing than "it's already covered"
 - Group feature tickets and standard tickets so it's obvious which rule set applied
-- If nothing is missing anywhere and no feature ticket is eligible, say so and stop
+- If nothing is missing anywhere and every feature ticket is either already covered or
+  ineligible, say so and stop
 
 **Then generate test cases for every Path B ticket** — don't ask which ones to do, and
-don't skip the step because the user didn't mention test cases. Generation is part of every
-run. The user's approval is required to **post** each suite (step 9), not to draft it.
+don't skip the step because the user didn't mention test cases. Generation is automatic for
+any feature ticket that reaches Path B. The user's approval is required to **post** each
+suite (step 9), not to draft it.
 
 ---
 
@@ -151,14 +187,19 @@ For every Path B ticket:
      Aim for roughly 5–10 rows; if a feature genuinely needs more, say why.
    - **Non-testable AC items** (sign-offs, "confirm scope with product", process steps) are
      not rows. Call them out below the matrix as open questions instead.
-   - **Format**: the same 10-column matrix as /qa-test-cases, so suites stay consistent:
+   - **Format**: the same 11-column matrix as /qa-test-cases, so suites stay consistent
+     wherever they were generated:
 
-     | Sr.No. | Area | Category | Scenario | Description | Steps | Expected Result | Comments/Ticket/Notes | Results | Tested Version |
+     | Sr.No. | Area | Category | Scenario | Description | Steps | Expected Result | Source | Comments/Ticket/Notes | Results | Tested Version |
 
      - **Category**: Happy Path / Critical only on this path
      - **Steps**: numbered, concrete ("1. Type 'x' in search 2. Press Esc")
+     - **Source**: where the case comes from, and it must never be blank —
+       `file:line` when generated from a diff, or the acceptance-criterion it covers
+       (e.g. `AC #2`) on the AC-only path. A row you cannot source is a row you invented;
+       cut it
      - **Results**: always starts as "Not Run"
-     - **Tested Version**: the build version captured in step 5's audit, or
+     - **Tested Version**: the build version captured in step 5b's audit, or
        "Not specified" when the ticket has none — never invent one
      - **Comments/Ticket/Notes**: the ticket link
 
@@ -177,6 +218,10 @@ Show the draft matrix in chat and ask explicitly, naming the count and the ticke
 Never post without this gate, even if the user pre-approved a different ticket in the
 same run.
 
+For a refreshed suite on the Path C-changed route, say so in the question — "Post a
+refreshed suite on <ticket>? The PR changed from #12 to #18 since the last one" — so the
+user knows they are approving a second comment, not a first.
+
 ---
 
 ### 10. Post the comment
@@ -189,30 +234,48 @@ QA test cases
 
 then the matrix. Nothing before that header — no greeting, no preamble.
 
+**That header is load-bearing.** Step 5a detects prior coverage by looking for a comment
+starting with `QA test cases`, so a suite posted under any other opening line is invisible
+to the next run and the ticket gets a duplicate suite tomorrow. Never reword it.
+
+On the Path C-changed route, add one line directly under the header naming the PR the
+earlier suite was built from, so the two comments can be told apart:
+`Supersedes the suite posted for PR #12 — regenerated for PR #18.`
+
 ---
 
 ### 11. Summarize
 
 Scanned N tickets (window X) → N standard / N feature · N passed · N bounced (with links) ·
-N unsure · test cases posted to N tickets.
+N unsure · test cases posted to N tickets · N already covered (skipped).
 
 ## Important
 - Ask the window FIRST, act LAST — no ClickUp write before the user has seen the verdict
   table.
 - Only touch tickets in `testing`. Never change tickets in other statuses.
 - Never edit the ticket description itself — that's the developer's job.
-- **Test-case generation is unconditional.** Every run of this skill generates suites for
-  every eligible feature ticket. Don't wait to be asked, don't ask which tickets to do, and
-  don't treat it as an optional extra — the only thing gated on the user is posting.
+- **Test-case generation is automatic, but once per ticket.** For any feature ticket
+  reaching Path B, generate without being asked and without asking which tickets to cover —
+  the only thing gated on the user is posting. But a ticket that already has its suite is
+  skipped at 5a, so re-running this skill daily costs nothing and posts nothing.
+- **Check for an existing suite BEFORE generating, not before posting.** The order matters:
+  checking late means the diff is read and the matrix drafted every single day for a ticket
+  that has been covered for weeks, and the user is asked about it every time. Checking at 5a
+  makes it a genuine skip.
+- **The `QA test cases` comment is the only record of coverage.** Never introduce a local
+  state file, cache or ticket list to track what's been posted — a file on one machine is
+  invisible to the other QA engineer running the same skill, so they would re-post
+  everything. ClickUp is the shared state; keep it that way.
 - **Never generate test cases for a bounced ticket** — a bounced feature ticket had neither
-  AC nor PR, so there is no trustworthy source material to generate from.
+  AC nor PR, so there is no trustworthy source material to generate from. Bouncing does not
+  block it forever: it has no `QA test cases` comment, so once the developer adds the AC or
+  the PR it becomes eligible on a later run.
 - **AC or PR, never both required.** A feature ticket with one of the two is eligible. Test
   environment, build details and sprint tag are warnings only and must never trigger a
   bounce on the feature path.
-- **Don't duplicate test-case comments.** Before posting, check
-  `clickup_get_task_comments` for an existing comment starting with `QA test cases`. If one
-  exists, show the user and ask whether to post an updated suite — never silently add a
-  second one.
+- **Never post a second `QA test cases` comment silently.** A refreshed suite is posted only
+  when the PR link has changed since the original AND the user approved it, and it must say
+  it supersedes the earlier comment.
 - Link tickets by name in every report — a bare ID isn't traceable for a reader.
 - Who to tag in the bounce comment (fallback chain):
   1. The ticket's **assigned developer** — the normal case.

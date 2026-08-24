@@ -132,33 +132,101 @@ tickets by hand.
    - **Clustering:** if 3 or more tickets filed in the last 7 days share a tag or
      an obvious feature area, name it — that area likely needs deeper testing
 
-5. **Render the report** in this exact compact format:
+5. **Render the report** in this exact format. It is a scannable document, not a
+   wall of text — the reader is half-awake in a standup and needs to find one
+   number without reading the rest.
 
    ```
-   📊 QA Daily Report — <Weekday, DD Mon YYYY>
-   Sprint: <the sprint-<N> tag resolved in Configuration>
+   # 📊 QA Daily Report — <Weekday, DD Mon YYYY>
 
-   Board: backlog N · to do N · in progress N · in review N · testing N · done N
+   **Sprint:** <sprint tag as spelled on the board>  ·  **Open:** N  ·  **Done:** N
 
-   🆕 Filed today: N <ID — title each if 1–3, count only if more>
-   🧪 In testing: N (entered today: N)
-   ✅ Closed today: N
-   🚫 Blocked: N <ID — title — assignee each>
-   🔥 Open by priority: urgent N · high N · normal N · low N · unset N
-      <one line per urgent/high ticket: ID — title — assignee — status>
-   📈 Sprint-wise: sprint-1 N open / N done · sprint-2 N open / N done
-      (one entry per sprint tag that still has OPEN tickets — fully closed
-      sprints drop off; leftovers from old sprints are the signal here)
-   🔀 Merged today: N <ticket ID + one-line summary each, or "no merges">
-   ⚠️ Flags: <ID — title — what's missing, per ticket; or "none">
-   💡 Watch: <insight bullets from step 4, each naming ID — title;
-      omit the line if there are none>
+   ---
 
-   Yesterday vs today: testing N→N, done N→N   (only if prior data available)
+   ## 🔢 At a glance
+
+   | | Count |
+   |---|---|
+   | 🆕 Filed today | N |
+   | 🧪 In testing | N  *(entered today: N)* |
+   | ✅ Closed today | N |
+   | 🚫 Blocked | N |
+
+   **By status** — backlog N · to do N · in progress N · in review N · testing N · done N
+
+   **By priority (open only)** — 🔴 urgent N · 🟠 high N · 🟡 normal N · 🟢 low N · ⚪ unset N
+
+   ---
+
+   ## 🔴 Urgent & high priority (N)
+
+   - **<Title>** — <assignee> · <status> · `<ID>`
+
+   ---
+
+   ## 📈 Sprint split
+
+   - **<sprint tag>** — N open · N done
+
+   ---
+
+   ## 🔀 Merged today
+
+   - **<one-line summary>** — `<task ID if the commit carries one>`
+
+   ---
+
+   ## ⚠️ Flags
+
+   - **<Title>** — <what is missing> · `<ID>`
+
+   ---
+
+   ## 💡 Watch
+
+   - **<Short label>** — <the observation, naming titles not bare IDs>
+
+   ---
+
+   *Yesterday → today: testing N→N · done N→N*
+
+   *Notes: <only the caveats that actually apply to today's numbers>*
    ```
 
-   Order matters: urgent and high tickets come before everything optional, so
-   the first thing read is the thing that needs action.
+   **Formatting rules — these are what make it readable:**
+
+   - **A blank line between every section, and a `---` rule between blocks.** The
+     old single-block format was the main complaint: sections ran together and the
+     ticket list looked like it belonged to the priority line above it.
+   - **Every ticket list gets its own heading with a count** — never a bare list
+     dangling under a counts line. A reader must never have to guess what a list
+     is a list *of*.
+   - **Ticket lines lead with the bold title, not the ID.** `**Day Night theme
+     added** — Pranav · testing · \`86d4103zv\`` — the title is what a human
+     recognises; the ID is a lookup key and belongs last, in backticks so it stops
+     competing with the words for attention.
+   - **One person per ticket line: the assignee.** Never render the creator,
+     reporter or owner alongside it — the report answers "who is holding this now",
+     and a second name doubles the line length while making the reader work out
+     which one they need. Creator data stays available in the fetched task for
+     investigating a ticket, and may be used in reasoning (e.g. deciding who to
+     chase when a ticket is unassigned), but it never appears in the output.
+   - **Truncate titles at a word boundary** around 50 characters, keeping any
+     leading `[Area]` prefix — `[Theme/Styling] Add button text color is…`, never
+     `...hardcoded ins...` cut mid-word at a random length.
+   - **Watch items are bullets with a bold label**, one observation each — not a
+     paragraph. `**QA queue stalled** — all 3 tickets in testing …`
+   - **Sections with nothing to say still appear**, with a single italic
+     *Nothing today* line. A section that vanishes reads as a check that never
+     ran — the same rule the other QA skills follow.
+   - Order is fixed: counts → what needs action → context (sprint, merges) →
+     flags → insights → footer. The first thing read is the thing that needs
+     action; caveats are last because nobody acts on them.
+
+   **If a Slack destination is ever configured**, re-render for Slack rather than
+   pasting this: Slack has no `#` headings and no tables, and uses single-asterisk
+   `*bold*`. Same content and order, `*bold*` section labels in place of headings,
+   and the at-a-glance table flattened to one line per metric.
 
 6. **Show the report in chat FIRST.** The user sees exactly what will be posted.
 
@@ -182,9 +250,14 @@ tickets by hand.
   hits partway through the date probes, keep the counts from call 1 (they are
   real), mark the date-based lines "unavailable — rate limited", and still show
   the report. A partial report labelled honestly beats no report.
-- Keep the report under ~20 lines — a summary nobody reads is worse than none.
-  The optional sections (merges, insights) are the first things to cut when it
-  runs long; the counts and the urgent/high list never get cut.
+- **Budget content, never whitespace.** Blank lines, rules and headings are what
+  make the report scannable — they are never what gets cut. The limit is on
+  substance: roughly 25 lines of actual content. When it runs long, trim the
+  optional sections (merges, watch items) or show fewer tickets with "+N more";
+  the counts and the urgent/high list never get cut, and neither does the spacing.
+- A long report that can be skimmed beats a short one that has to be parsed. The
+  earlier compact single-block version fit in 20 lines and was unreadable, which
+  is the failure this format exists to fix.
 - Never drop a ticket's title to save a line. If a list runs long, show fewer
   tickets and add "+N more" — a bare ID makes the reader open ClickUp, which is
   exactly the manual step this report exists to remove.

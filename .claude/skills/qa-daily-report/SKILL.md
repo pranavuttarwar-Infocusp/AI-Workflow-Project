@@ -116,7 +116,8 @@ tickets by hand.
    message carries a task ID (the repo convention is `<type>/<task-id>-slug` and
    `(#<task-id>)` in the PR title) and show that ID alongside. This is a local
    read — it costs no ClickUp API calls. If the repo is unavailable or the log is
-   empty, print "no merges" rather than omitting the section.
+   empty, keep the section and print the italic *No merges* empty-state line from
+   step 5 rather than omitting it.
 
 4. **Derive the insights** from data already fetched in step 1 — no new calls
    beyond the bounded probes already budgeted there. Only include a bullet when
@@ -158,7 +159,7 @@ tickets by hand.
 
    ---
 
-   ## 🔴 Urgent & high priority (N)
+   ## <priority heading> (N)
 
    - **<Title>** — <assignee> · <status> · `<ID>`
 
@@ -216,9 +217,14 @@ tickets by hand.
      `...hardcoded ins...` cut mid-word at a random length.
    - **Watch items are bullets with a bold label**, one observation each — not a
      paragraph. `**QA queue stalled** — all 3 tickets in testing …`
-   - **Sections with nothing to say still appear**, with a single italic
-     *Nothing today* line. A section that vanishes reads as a check that never
-     ran — the same rule the other QA skills follow.
+   - **Name the priority heading after what is actually there** — `🔴 Urgent &
+     high priority (N)` when both exist, `🟠 High priority (N)` when urgent is 0,
+     `🔴 Urgent (N)` when high is 0. A heading promising urgent tickets above a
+     list containing none teaches the reader to distrust the headings.
+   - **Sections with nothing to say still appear**, with a single italic line
+     saying so in that section's own terms — *No merges*, *No blockers*,
+     *Nothing today* for flags. A section that vanishes reads as a check that
+     never ran — the same rule the other QA skills follow.
    - Order is fixed: counts → what needs action → context (sprint, merges) →
      flags → insights → footer. The first thing read is the thing that needs
      action; caveats are last because nobody acts on them.

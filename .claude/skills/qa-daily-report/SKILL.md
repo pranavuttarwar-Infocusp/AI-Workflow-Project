@@ -159,7 +159,7 @@ tickets by hand.
 
    ---
 
-   ## <priority heading> (N)
+   ## 🔥 Needs action — 🔴 urgent N · 🟠 high N
 
    - **<Title>** — <assignee> · <status> · `<ID>`
 
@@ -217,14 +217,18 @@ tickets by hand.
      `...hardcoded ins...` cut mid-word at a random length.
    - **Watch items are bullets with a bold label**, one observation each — not a
      paragraph. `**QA queue stalled** — all 3 tickets in testing …`
-   - **Name the priority heading after what is actually there** — `🔴 Urgent &
-     high priority (N)` when both exist, `🟠 High priority (N)` when urgent is 0,
-     `🔴 Urgent (N)` when high is 0. A heading promising urgent tickets above a
-     list containing none teaches the reader to distrust the headings.
+   - **A zero is information — print it, never hide it.** Every priority appears
+     in the "By priority" line and in the Needs-action heading with its real
+     count, `🔴 urgent 0` included. A reader needs to see that urgent is empty
+     today; a missing label is indistinguishable from a label that was never
+     checked. The heading carries both counts rather than being renamed, so it
+     stays identical day to day and never implies urgent tickets exist when the
+     count beside it says 0.
    - **Sections with nothing to say still appear**, with a single italic line
      saying so in that section's own terms — *No merges*, *No blockers*,
-     *Nothing today* for flags. A section that vanishes reads as a check that
-     never ran — the same rule the other QA skills follow.
+     *No urgent or high priority tickets*, *Nothing today* for flags. A section
+     that vanishes reads as a check that never ran — the same rule the other QA
+     skills follow.
    - Order is fixed: counts → what needs action → context (sprint, merges) →
      flags → insights → footer. The first thing read is the thing that needs
      action; caveats are last because nobody acts on them.

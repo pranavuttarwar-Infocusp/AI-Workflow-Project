@@ -164,7 +164,30 @@ For each failing ticket, after the user confirms the list:
      so the developer knows one item is enough rather than both.
 
    - Move the ticket back with `clickup_update_task` → status `in review`
-   - Both writes require user approval per `.claude/settings.json` — never skip
+
+   - **Record the bounce as a tag** — this is what makes reopen counting possible
+     at all on a Free ClickUp plan. `Total time in Status` (the ClickApp that
+     exposes real status history to the API) requires the Business plan, so on
+     this workspace `clickup_get_bulk_tasks_time_in_status` returns no data for
+     every ticket. A tag is the substitute, and tags come back in the ordinary
+     `clickup_filter_tasks` response, so /qa-sprint-report reads the count with
+     no extra API calls.
+
+     Scheme — cumulative, one tag per bounce:
+     1. Read the ticket's existing tags for any matching `bounced-<N>`
+        (case-insensitive). You already have them from the step 2 fetch.
+     2. Take the HIGHEST N present; if none, N = 0.
+     3. Add `bounced-<N+1>` with `clickup_add_tag_to_task`.
+
+     Keep the earlier `bounced-*` tags — do NOT remove them. Removing costs an
+     extra call per bounce and a failed removal would leave the count wrong in
+     a way nothing can detect later; leaving them gives an audit trail and the
+     reader can still see the count at a glance.
+
+   - All three writes (comment, status, tag) require user approval per
+     `.claude/settings.json` — never skip. The tag is part of the same bounce
+     approval, not a separate question: a bounce that moves the status but
+     skips the tag is invisible to every future sprint report.
    - This ends the flow for that ticket. Do not generate test cases for a bounced ticket.
 
 ---
@@ -296,6 +319,19 @@ N unsure · test cases posted to N tickets · N already covered (skipped).
   3. After showing the list, ALWAYS ask the user: "Send a reminder comment on any
      of these?" (AskUserQuestion or plain question). Only re-comment on the ones
      the user picks — a reminder is a human decision, never automatic.
+- **Increment `bounced-<N>` only on a real bounce.** The "⏳ Already warned, still
+  incomplete" path does not comment or change status, so it must not add a tag
+  either — the ticket has not bounced again, it simply has not been fixed. Adding
+  one there would inflate every reopen count by one per daily run, which is worse
+  than having no count at all. A reminder comment the user approves is also not a
+  bounce and gets no tag.
+- **What the bounce tags do and don't measure.** They count bounces made by THIS
+  skill. If a developer or QA drags a ticket from `testing` back to `in progress`
+  by hand in the ClickUp UI, nothing records it. So the count is a floor, not a
+  total, and /qa-sprint-report must label it that way rather than presenting it as
+  a complete reopen count. This is a Free-plan limitation, not a design choice:
+  the real fix is the `Total time in Status` ClickApp on Business, which reads
+  actual status history including manual moves.
 - Connector quirk: assign users by NUMERIC user ID (e.g. Pranav 228106678,
   Shekhar 228119573 — or via `clickup_get_workspace_members`); email/username
   assignment fails silently.

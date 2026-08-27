@@ -1,5 +1,5 @@
 ---
-description: Sprint-close quality report for the TaskPulse board — completed vs spillover, tickets reopened during testing (via status history), repeat bouncers, and bugs filed during the sprint. Renders the report in chat only — it is never posted to ClickUp. Triggers on "/qa-sprint-report", "sprint quality report", "sprint review report", "sprint reopen report".
+description: Sprint-close quality report for the TaskPulse board — finished vs still open, work-type and open-bug-priority breakdowns, tickets reopened during testing (counted from the bounce tags left by /qa-ticket-check, since real status history needs a paid plan), repeat bouncers, and suggested action items. Renders the report in chat only — it is never posted to ClickUp. Triggers on "/qa-sprint-report", "sprint quality report", "sprint review report", "sprint reopen report".
 ---
 
 # QA Sprint Report
@@ -27,9 +27,18 @@ default = resolve the current sprint automatically)
      heavy per-ticket work. On a scheduled run, never ask — resolve and state
      which tag was used in the report.
 - **Reopen definition:** a backward status move out of `testing` — i.e. the
-  status history shows `testing` followed later by `in progress` or `in review`.
+  ticket reached `testing` and later went back to `in progress` or `in review`.
   Each such backward move = one bounce. A ticket with 2+ bounces is a
   **repeat bouncer**.
+- **Plan constraint (why reopens are counted from tags):** this workspace is on
+  the ClickUp **Free** plan. The `Total time in Status` ClickApp — the only thing
+  that exposes real status history to the API — requires **Business**, so
+  `clickup_get_bulk_tasks_time_in_status` returns no data here for any ticket.
+  /qa-ticket-check therefore stamps a cumulative `bounced-<N>` tag on every
+  ticket it bounces, and this skill counts those tags. Tags arrive in the
+  ordinary task fetch, so the count is free. The tradeoff is real and must be
+  stated in the report: a ticket moved backward by hand in the ClickUp UI leaves
+  no tag, so the tag count is a **minimum**, not a total.
 - **Spillover definition:** any ticket carrying the sprint tag whose current
   status is not `done`/`Closed` at report time. Carrying it forward = adding the
   next sprint's tag (the report suggests this; it never re-tags by itself).
@@ -56,20 +65,42 @@ default = resolve the current sprint automatically)
    — every list in this report is read by a human who needs to know which
    ticket it is without opening ClickUp.
 
-3. **Detect reopens via status history.** Call
-   `clickup_get_bulk_tasks_time_in_status` for the sprint's ticket IDs (bulk —
-   one call for many tickets; batch if the sprint is large; the API rate limit
-   is tight). For each ticket, walk the status-history order and count
-   backward moves out of `testing` per the Reopen definition above. The bulk
-   call returns IDs only — join its results back to the titles from step 1 so
-   the reopen and bouncer lists carry titles, not bare IDs. Record:
-   - reopened tickets (with title, bounce count and assignee)
-   - repeat bouncers (2+ bounces) — the list most likely to be acted on, so
-     titles matter most here
-   - any pattern worth a human sentence (e.g. both reopens on one feature)
-   If the bulk history call is unavailable or rate-limited, say so in the
-   report and mark the reopen section "no data" — never infer reopens from
-   `date_updated`.
+3. **Count reopens.** Two sources, in this order.
+
+   **Primary — `bounced-<N>` tags (works on any plan, zero extra API calls).**
+   Every bounce made by /qa-ticket-check leaves a cumulative tag on the ticket,
+   and tags already come back in the step 1 fetch. Per ticket:
+   - collect tags matching `bounced-<N>` (case-insensitive)
+   - the ticket's bounce count = the HIGHEST N present; no such tag = 0 bounces
+   - bounce count ≥ 1 → reopened; ≥ 2 → **repeat bouncer**
+
+   **Secondary — real status history, only if it is actually available.** Try
+   `clickup_get_bulk_tasks_time_in_status` once (bulk; batch if the sprint is
+   large). When it returns data, prefer it: it is a true count that includes
+   manual moves. Walk the status-history order and count backward moves out of
+   `testing` per the Reopen definition above. The bulk call returns IDs only —
+   join back to the titles from step 1.
+
+   On THIS workspace the secondary source is expected to fail: `Total time in
+   Status` requires the ClickUp **Business** plan and this workspace is on
+   **Free**, so the call returns "no time in status data available" for every
+   ticket. That is the normal case, not an incident — note it in one line and
+   move on with the tag count. Do not retry it repeatedly and never present the
+   failure as though the report is broken.
+
+   Either way, record reopened tickets (title, bounce count, assignee), repeat
+   bouncers, and any pattern worth a human sentence (e.g. both reopens on one
+   feature).
+
+   **Always label which source was used, and label the tag count a MINIMUM.**
+   Bounce tags only capture bounces made through /qa-ticket-check — a ticket
+   dragged backward by hand in the ClickUp UI leaves no tag. So the honest
+   phrasing is "at least N reopens (bounces recorded by the QA check; manual
+   moves are not tracked on the Free plan)", never a bare "N reopens". A number
+   the reader believes is complete when it is a floor is worse than a number
+   labelled as a floor.
+
+   Never infer reopens from `date_updated` — any edit bumps it.
 
 4. **Break the sprint down by type of work.** Every ticket in the sprint is
    counted exactly ONCE into one of these buckets, and the buckets must sum to
@@ -176,10 +207,14 @@ default = resolve the current sprint automatically)
    | <ID> | <title> | <status> | <assignee first name> |
 
    ## Reopened tickets
-   <Count plus one line per ticket: ID, title, who, how many bounces. When the
-   status-history call is unavailable, explain in one plain sentence WHAT a
-   reopen is, that it could not be measured, and the exact fix — never a bare
-   "no data".>
+   <Explain in one plain sentence WHAT a reopen is the first time it appears.
+   Then the count, labelled as a minimum when it came from bounce tags:
+   "At least N tickets were sent back from Testing." One line per ticket —
+   ID, title, who, how many bounces — and mark repeat bouncers (2+).
+   Close with one line naming the source and its limit, e.g. "Counted from
+   bounce tags left by the QA check; a ticket moved back by hand in ClickUp
+   isn't tracked on the Free plan." When the count is 0, say "none recorded"
+   rather than "none" — the two are different things here.>
 
    ## Suggested action items for next sprint
    1. <Action> — <the evidence from this run that produced it>

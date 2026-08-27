@@ -71,37 +71,146 @@ default = resolve the current sprint automatically)
    report and mark the reopen section "no data" — never infer reopens from
    `date_updated`.
 
-4. **Count bugs filed during the sprint:** tickets created between the sprint's
-   start and end dates that are bugs (bug tag, or "bug"-type name per the
-   `/qa-bug-report` convention). Sprint dates come from the sprint list name or
-   the user; if unknown, use the earliest/latest activity on the sprint's
-   tickets and say the window is approximate.
+4. **Break the sprint down by type of work.** Every ticket in the sprint is
+   counted exactly ONCE into one of these buckets, and the buckets must sum to
+   the sprint total:
+   - **Bug** — has a `bug` tag (or a "bug"-type name per the `/qa-bug-report`
+     convention) and no `feature` tag
+   - **Feature** — has a `feature` tag and no `bug` tag
+   - **Bug + Feature** — carries BOTH tags. Real on this board (e.g.
+     `86d44c0wa`). Counting per-tag instead of per-ticket double-counts these
+     and the total stops adding up, which is the first thing a reader notices.
+     Omit the row when the count is 0.
+   - **Not labelled** — neither tag. Omit the row when 0; when non-zero it is
+     worth a sentence, because an unlabelled ticket is a hygiene problem.
 
-5. **Render the report** in this exact compact format:
+   State the total under the buckets so the reader can see it adds up. If it
+   ever does not add up, say so in the report rather than silently adjusting a
+   number. Never report a bug count on its own — a reader given "6 tickets, 5
+   bugs" is left subtracting to find the 6th.
+
+   **Bugs FILED during the sprint** (a different number from the bucket above,
+   which counts bugs *in* the sprint) needs creation dates, which
+   `clickup_filter_tasks` does not return. Only report it when the sprint
+   window is known and you have the dates; otherwise omit the line rather than
+   presenting the bucket count as "filed this sprint".
+
+   Sprint dates come from the sprint list name or the user; if unknown, say the
+   window is not set on the board rather than inventing one.
+
+   **Open bugs by priority.** From the same fetch — no extra API calls — group
+   every bug-tagged ticket that is NOT `done`/`Closed` by its `priority` field
+   (`urgent`, `high`, `normal`, `low`, and `null` = **no priority set**). Order
+   the rows urgent → high → normal → low → no priority set, and omit rows that
+   are 0. Report it as a count of *open* bugs, never of all bugs: a manager
+   reads this row to decide whether the sprint can close, and a closed bug is
+   not a reason to hold a sprint. Tickets with `priority: null` are listed under
+   "no priority set" rather than dropped or guessed at — an unprioritised bug is
+   itself a hygiene finding worth a sentence.
+
+   **Suggested action items.** Derive 2–3 concrete changes for next sprint from
+   what THIS run actually found — never generic advice. Each one names the
+   evidence that produced it, so the reader can judge it:
+   - assignee imbalance (one person holding most of the open work)
+   - a repeat bouncer, or a cluster of reopens on one feature
+   - open urgent/high bugs carrying over
+   - tickets stuck in one status for most of the sprint
+   - hygiene: unlabelled tickets, missing priority, missing acceptance criteria
+   Write them as suggestions the user edits before sharing, not as decisions —
+   this skill cannot see team context (leave, priorities, dependencies). If the
+   run found nothing worth acting on, say that in one line instead of padding
+   the list.
+
+5. **Render the report** in plain language, using this structure. Headings,
+   short sentences and tables — never a dense block of emoji-prefixed lines the
+   reader has to decode:
 
    ```
-   🏁 QA Sprint Report — sprint-<N> (<DD Mon> – <DD Mon YYYY>)
+   # Sprint <N> — Quality Report
 
-   Scope: N tickets · ✅ done N · 📦 spillover N
-   🔁 Reopened in testing: N ("none" if 0; one line each)
-      <ID> — <title> — <assignee> — <N> bounce(s)
-   🔥 Repeat bouncers (2+): N ("none" if 0; one line each)
-      <ID> — <title> — <assignee> — <N> bounces
-   🐞 Bugs filed this sprint: N
-   📦 Spillover → next sprint: N ("none" if 0; one line each)
-      <ID> — <title> — <current status> — <assignee>
+   ## The short answer
+   <one or two plain sentences: what happened this sprint. This is the part the
+   manager actually reads — make it concrete.>
 
-   Quality line: <one plain sentence a manager can read, e.g.
-   "14 tickets, 11 done, 3 spill over; 2 reopens, both on the login feature.">
+   ## The numbers
+   | | |
+   |---|---|
+   | Tickets in this sprint | N |
+   | Finished | N |
+   | Still open | N |
+
+   **What kind of work it was**
+   | Type | Count |
+   |---|---|
+   | Bugs | N |
+   | Features | N |
+   | Bug + Feature | N   <- omit row if 0
+   | Not labelled | N    <- omit row if 0
+   | **Total** | **N** |
+
+   ## Who is holding the work
+   - <Name> — N tickets
+
+   ## Open bugs by priority
+   | Priority | Open bugs |
+   |---|---|
+   | Urgent | N |          <- omit any row that is 0
+   | High | N |
+   | Normal | N |
+   | Low | N |
+   | No priority set | N |
+   <One plain sentence on what this means for closing the sprint — an open
+   urgent bug is a reason to hold, ten open low bugs usually are not.>
+
+   ## Tickets finished
+   | Ticket | What it is | Type | Status | Who did it |
+   |---|---|---|---|---|
+   | <ID> | <title> | Bug/Feature/Both | done or Closed | <first name> |
+   <Print the real status, not the word "finished" — `done` and `Closed` are
+   two different statuses on this board and the difference matters to the
+   reader. Omit the whole section only when the sprint finished nothing.>
+
+   ## Tickets still open
+   | Ticket | What it is | Where it's stuck | Who has it |
+   |---|---|---|---|
+   | <ID> | <title> | <status> | <assignee first name> |
+
+   ## Reopened tickets
+   <Count plus one line per ticket: ID, title, who, how many bounces. When the
+   status-history call is unavailable, explain in one plain sentence WHAT a
+   reopen is, that it could not be measured, and the exact fix — never a bare
+   "no data".>
+
+   ## Suggested action items for next sprint
+   1. <Action> — <the evidence from this run that produced it>
+   2. ...
+   <Then one line: these are suggestions to edit, not decisions — the report
+   cannot see leave, dependencies or business priorities.>
+
+   ## What I could not check
+   <Only when something genuinely failed. Name the missing thing, why it
+   matters in one sentence, and the concrete fix.>
    ```
 
-   **ALWAYS print the ticket TITLE next to the ID — never a bare ID.** A tester
-   reading `86d40ecg7` has to go look it up; `86d40ecg7 — Improve search` they
-   can act on immediately. This applies to every ticket mentioned anywhere in
-   the report, including the Quality line, which should name features in words
-   ("both reopens on the search feature"), not IDs. Titles come from the fetch
-   in step 1 — no extra API calls. Truncate a long title to ~60 characters with
-   an ellipsis rather than dropping it or wrapping the line.
+   Rules for the rendering:
+   - **Explain the jargon inline.** "Reopen", "spillover" and "repeat bouncer"
+     are not obvious to a reader outside the team. Say what a reopen is the
+     first time it appears, in one short sentence.
+   - **Say "still open", not "spillover"**, in the reader-facing text. Keep the
+     word "spillover" only where the user has used it.
+   - **No symbol keys.** Never define a marker like "ⓢ = sample ticket" and
+     make the reader look it up — write `*(sample)*` next to the title instead.
+   - **ALWAYS print the ticket TITLE next to the ID — never a bare ID.** A
+     tester reading `86d40ecg7` has to go look it up; `86d40ecg7 — Improve
+     search` they can act on immediately. This applies everywhere, including
+     the short answer, which should name features in words, not IDs. Titles
+     come from the fetch in step 1 — no extra API calls. Truncate a long title
+     to ~60 characters with an ellipsis rather than dropping it.
+   - **Every ticket in the sprint appears in exactly one of the two ticket
+     tables** — Finished or Still open — and the two row counts must add up to
+     the sprint total. A ticket that is in the count but in neither table is
+     invisible to the reader, which is the same as not reporting it.
+   - Omit any section that has nothing to say, apart from the numbers.
 
 6. **Show the report in chat. That is the whole output** — the run ends here.
    Nothing is written to ClickUp: no doc, no page, no comment. Do not offer to
@@ -130,7 +239,12 @@ default = resolve the current sprint automatically)
 - Ticket titles are never dropped to save space — a bare ID costs the reader a
   ClickUp lookup, which defeats the point of the report. If a section runs long,
   cut the number of tickets listed (with "+N more") rather than their titles.
-- Keep the report to ~20 lines; the "Quality line" is the part the manager
-  actually reads — make it concrete, not generic.
+- Readability beats brevity. The report should be skimmable in under a minute
+  by someone who does not know the board — that means headings and tables, not
+  a compressed block. "The short answer" is the part the manager actually
+  reads; make it concrete, not generic.
 - Sample/test tickets on the board are fake; if the sprint contains known
-  sample tickets, count them but mark them so the numbers aren't misread.
+  sample tickets, count them but write `*(sample)*` after the title so the
+  numbers aren't misread.
+- Every count in the report must be traceable to a ticket the report names. If
+  a number cannot be broken down, do not print it.

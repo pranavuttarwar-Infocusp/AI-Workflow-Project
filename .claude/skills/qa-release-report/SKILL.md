@@ -1,5 +1,5 @@
 ---
-description: Release go/no-go report — what is shipping, whether it is safe to ship, and the raw commit log behind it. Cross-checks the ClickUp board against git so a ticket closed with nothing merged is caught. Supports release candidates (rc-1..rc-2) when the repo uses them, and falls back to tags, a marker file or the sprint window when it does not. Renders in chat only. Triggers on "/qa-release-report", "release report", "release notes", "is this safe to ship", "go no-go", "what is in this release", "RC report".
+description: Release go/no-go report — what is shipping, whether it is safe to ship, and the raw commit log behind it. Cross-checks the ClickUp board against git so a ticket closed with nothing merged is caught. Supports release candidates in any spelling (rc-2, RC_2, release_candidate_01, release-candidate-2) when the repo uses them, and falls back to tags, a marker file or the sprint window when it does not. Renders in chat only. Triggers on "/qa-release-report", "release report", "release notes", "is this safe to ship", "go no-go", "what is in this release", "RC report".
 ---
 
 # QA Release Report
@@ -22,7 +22,7 @@ ambiguous argument predictable — resolve it the same way every run:
 | Test on $ARGUMENTS | Meaning | Example |
 |---|---|---|
 | contains `..` | explicit range, used verbatim | `rc-1..rc-3`, `v1.0..v1.1`, `d09cd07..HEAD` |
-| matches `rc[-_ ]?<N>` (case-insensitive) | release candidate N | `RC2`, `rc-2` |
+| matches the RC pattern (see *Release candidates*) | release candidate N | `RC2`, `rc-2`, `release_candidate_01` |
 | starts with `sprint` | sprint tag scope | `sprint 2` |
 | starts with `--` | flag (see below) | `--strict` |
 | anything else | feature keyword scope | `search-filter` |
@@ -83,15 +83,62 @@ here, not a failure.
 
 ### Release candidates
 
+- **Refresh remotes first:** `git fetch --all --tags`. RC branches are usually
+  cut by someone else, so a stale remote-tracking list is the most likely reason
+  a candidate that exists on the server is "not found" locally. This is a
+  read-only fetch — it updates tracking refs and touches no working files.
 - **Look in branches and tags, local AND remote** — `git branch -a` and
   `git tag`. RC branches commonly exist only on `origin`, so checking local refs
   alone misses them entirely.
-- **Patterns that count as an RC ref**, matched case-insensitively:
-  `rc-2`, `rc2`, `RC_2`, `release/rc-2`, `release-candidate-2`, `v1.4-rc2`.
-  Extract N as the trailing integer.
+- **What counts as an RC ref — use this regex, not a list of examples.**
+  Case-insensitive, matched anywhere in the ref name:
+
+  ```
+  (^|[^a-z0-9])(rc|release[-_. ]?candidate)[-_. ]?0*([0-9]+)
+  ```
+
+  Both the short form (`rc`) and the long form (`release candidate`) are
+  covered, with `-`, `_`, `.`, a space, or nothing as the separator. All of
+  these match, and every one of them must:
+
+  ```
+  rc-1   rc2   RC_2   release/rc-2   v1.4-rc2
+  release-candidate-2   release_candidate_01   RELEASE_CANDIDATE_10
+  ```
+
+  Teams spell this differently and the long underscore form
+  (`release_candidate_01`) is common — matching only the short `rc` form finds
+  nothing on those repos and silently drops to a lower rung.
+
+- **The leading `[^a-z0-9]` guard is load-bearing.** Plenty of ordinary words
+  contain the letters `rc` — `search-filter`, `archive-chat`, `source2`. Without
+  the boundary they match as release candidates and the report compares two
+  unrelated branches. Verified against this repo's ~60 branches: zero false
+  positives.
+
+- **N is capture group 3, with leading zeros stripped by the `0*`.** So
+  `release_candidate_01` → N=1 and `release_candidate_09` → N=9. Parse base 10
+  explicitly; `08` and `09` must never be read as octal.
+
 - **Sort by N NUMERICALLY, never as text.** `rc-10` must beat `rc-9`; sorted as
   strings, `rc-10` sorts before `rc-2` and the report compares the wrong pair.
   A wrong range that looks right is the worst outcome this skill can produce.
+
+- **Padding is cosmetic — unify on N.** `release_candidate_01` and
+  `release_candidate_2` are candidates 1 and 2 of one series. Never treat
+  different padding as different series.
+
+- **If the user NAMES an RC that does not exist, stop and say so** — do not fall
+  through to a lower rung. Falling through would silently report a different
+  range than the one asked for, which is exactly the failure this chain exists
+  to prevent. Name what was searched and list the RC refs that DO exist:
+
+  > No ref matching release candidate 3 was found (searched local and remote
+  > branches and tags). Found: `release_candidate_01`, `release_candidate_02`.
+  > Did you mean RC2, or does the branch need fetching?
+
+  If none exist at all, say the repo has no RC refs and suggest running without
+  an argument.
 - **Current RC** = the one named in $ARGUMENTS, else the highest N found.
   **Previous RC** = the next lower N that actually exists.
 - **Only `rc-1` exists** → range runs from the latest release tag (or the repo's

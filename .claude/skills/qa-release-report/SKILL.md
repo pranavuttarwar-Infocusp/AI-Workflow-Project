@@ -1,5 +1,5 @@
 ---
-description: Release go/no-go report — what is shipping, whether it is safe to ship, and the raw commit log behind it. Cross-checks the ClickUp board against git so a ticket closed with nothing merged is caught. Supports release candidates in any spelling (rc-2, RC_2, release_candidate_01, release-candidate-2) when the repo uses them, and falls back to tags, a marker file or the sprint window when it does not. Renders in chat only. Triggers on "/qa-release-report", "release report", "release notes", "is this safe to ship", "go no-go", "what is in this release", "RC report".
+description: Release go/no-go report — what is shipping, whether it is safe to ship, and the raw commit log behind it. Cross-checks the ClickUp board against git so a ticket closed with nothing merged is caught, and flags tickets closed without ever passing through the testing status. Supports release candidates in any spelling (rc-2, RC_2, release_candidate_01, release-candidate-2) when the repo uses them, and falls back to tags, a marker file or the sprint window when it does not. Renders in chat only. Triggers on "/qa-release-report", "release report", "release notes", "is this safe to ship", "go no-go", "what is in this release", "RC report".
 ---
 
 # QA Release Report
@@ -9,7 +9,8 @@ moved today; the sprint report says how good the sprint's work was; this one
 says **what is actually going out and whether it is safe to send.**
 
 It is the only QA skill that reads the board and the code together, so it is
-the only one that catches a ticket marked `done` with nothing merged behind it.
+the only one that catches a ticket marked `done` with nothing merged behind it —
+or one that reached `done` without QA ever seeing it in `testing`.
 
 **Optional user input:** $ARGUMENTS — see *Arguments* below. Default = resolve
 the range automatically.
@@ -50,6 +51,11 @@ verdict.
   matching `sprint[ -]?<N>` case-insensitively is sprint N. Never match the
   exact literal — the board uses a space (`sprint 2`) and a hyphen must match
   too, or the report silently scopes to nothing.
+- **`reached-testing` marking started:** `2026-09-01`. /qa-ticket-check stamps a
+  `reached-testing` tag on every ticket it finds in `testing`; that tag is what
+  step 6 reads. A ticket closed BEFORE this date has no such tag for a reason
+  that has nothing to do with skipping QA, so it must be reported as "can't
+  tell", never as a skip. Update this date only if the convention is ever reset.
 - Report timezone: user's local (Asia/Kolkata)
 
 ## Range resolution
@@ -190,24 +196,77 @@ here, not a failure.
    The three buckets must sum to the ticket count in scope. If they do not, say
    so in the report rather than quietly adjusting a number.
 
-6. **Compute the verdict** per *Verdict rules* below. Every blocker names the
+6. **Find tickets that reached `done` without passing through `testing`.**
+   Only `done`/`Closed` tickets in scope are candidates — i.e. everything in the
+   Shipping and Closed-with-nothing-merged buckets. Walk these rungs and **stop
+   at the first one that resolves**; always name the rung used in the report,
+   because the two rungs mean genuinely different things.
+
+   **Rung 1 — real status history (authoritative).** Try
+   `clickup_get_bulk_tasks_time_in_status` once for the candidate IDs (batch if
+   the list is large). When it returns data, use it and nothing else: a ticket
+   whose status history never contains `testing` **skipped QA, confirmed**. The
+   bulk call returns IDs only — join back to the titles from step 4.
+
+   On THIS workspace this rung returns "no time in status data available" for
+   every ticket: `Total time in Status` requires the ClickUp **Business** plan
+   and this workspace is on **Free**. That is the normal case, not an incident —
+   note it in one line, do not retry it, and drop to rung 2. Never present it as
+   the report being broken.
+
+   **Rung 2 — QA evidence markers (a suspicion, not a finding).** Reconstruct
+   from what the QA skills leave behind. Any ONE of these proves the ticket did
+   reach `testing`:
+   - a `reached-testing` tag — stamped by /qa-ticket-check on every ticket it
+     scans in `testing`
+   - any `bounced-<N>` tag — you only get bounced OUT of `testing`
+   - a comment starting with `QA test cases` — only posted to tickets in
+     `testing`
+
+   The first two arrive free in the step 4 fetch. The comment check costs one
+   `clickup_get_task_comments` per ticket, so run it ONLY on tickets that failed
+   both tag checks, **cap it at 10 tickets per run**, and state in the report how
+   many candidates went unchecked because of the cap. A ticket with none of the
+   three, closed on or after the marking date in *Configuration*, is a
+   **suspected skip**.
+
+   **Rung 2 over-reports, and the report must say so.** The markers only exist
+   for tickets /qa-ticket-check actually scanned, so a ticket that entered and
+   left `testing` between two runs looks identical to one that was never tested.
+   That makes this list a **ceiling** — tickets to ask about, not proven QA
+   misses. This is the opposite direction from the bounce counts in
+   /qa-sprint-report, which are a floor; do not copy that skill's "at least N"
+   phrasing here, it points the wrong way. Honest phrasing is "N tickets have no
+   record of reaching Testing", never "N tickets skipped QA".
+
+   **Tickets closed before the marking date are not skips.** They predate the
+   convention, so the absence of a tag says nothing. Count them separately and
+   report them as "can't tell", in their own line. Never fold them into the skip
+   list to make the number bigger. The comparison needs each ticket's close date,
+   and `clickup_filter_tasks` returns `date_closed` — so this costs no extra
+   calls. Never reach for `clickup_get_task` to get it.
+
+   Under rung 1 the finding is confirmed and the hedging above does not apply —
+   say "skipped Testing" plainly and drop the ceiling caveat.
+
+7. **Compute the verdict** per *Verdict rules* below. Every blocker names the
    ticket that caused it — a verdict without evidence is an opinion.
 
-7. **Collect known issues.** From the step 4 fetch, every bug-tagged ticket NOT
+8. **Collect known issues.** From the step 4 fetch, every bug-tagged ticket NOT
    `done`/`Closed`, grouped by `priority` (`urgent`, `high`, `normal`, `low`,
    and `null` = no priority set). Every ticket carries title, ID and assignee.
 
-8. **Derive "watch after release"** — 2–3 observations from what THIS run found,
+9. **Derive "watch after release"** — 2–3 observations from what THIS run found,
    each naming its evidence. Never generic advice. Good sources: a file every
    change touches (blast radius), a cluster of PRs in one area, a feature
    shipping with open normal-priority bugs, a large unlinked-commit count.
    Observations, not diagnoses — say what the data shows, not why.
 
-9. **Render the report** (template below) and **show it in chat. That is the
-   whole output** — the run ends here. Nothing is written to ClickUp or git. Do
-   not offer to post it and do not ask where to put it.
+10. **Render the report** (template below) and **show it in chat. That is the
+    whole output** — the run ends here. Nothing is written to ClickUp or git. Do
+    not offer to post it and do not ask where to put it.
 
-10. **Suggest the tag command on a GO verdict** — show it, never run it.
+11. **Suggest the tag command on a GO verdict** — show it, never run it.
     Tagging writes to the user's repo and stays their call:
     `git tag rc-3 && git push --tags`
 
@@ -226,6 +285,11 @@ Three **hard blockers**. Any one of them → **NO-GO**:
 - Repeat bouncers (2+ `bounced-<N>` tags, per the /qa-ticket-check convention)
 - Unlinked commits
 - Tickets closed with nothing merged
+- Tickets closed with no record of reaching `testing` (step 6). Soft on
+  purpose: on rung 2 this is a suspicion, and a suspicion must not silently
+  turn a GO into a NO-GO. `--strict` promotes it like any other soft warning.
+  A **rung 1** skip — confirmed from real status history — is still soft, but
+  say "confirmed" in the warning so the reader can weigh it properly.
 
 Verdict badges:
 
@@ -275,6 +339,30 @@ features in words, never bare IDs.>
 ⚠️ **Closed with nothing merged: N** — **<title>** · `<ID>` is marked `done`
 but no commit in this range references it.
 <Omit this line entirely when the count is 0.>
+
+---
+
+## ⏭️ Closed without going through Testing — N tickets
+
+<One plain sentence explaining it the first time: these tickets were marked done
+without QA ever recording them in the `testing` column, so nothing was verified
+before they went out.>
+
+| Ticket | Who closed it | What we know |
+|---|---|---|
+| **<title>** · `<ID>` | <first name> | no QA record of it reaching Testing |
+
+*How this was worked out: <QA markers — a ceiling, see below | real status
+history — confirmed>.*
+<On rung 2, one line: "The QA check only marks tickets it scans, so a ticket that
+passed through Testing between two runs looks the same as one that skipped it.
+Treat these as tickets to ask about, not proven misses.">
+<When any candidate was skipped by the 10-ticket comment cap, one line saying how
+many and that they are not in the count.>
+<When any done ticket closed before the marking date: "N ticket(s) closed before
+QA marking started on <date> — can't tell either way." Never counted as skips.>
+<When the count is 0, replace the table with one italic line — *Every ticket in
+this release has a record of reaching Testing* — and keep the source line.>
 
 ---
 
@@ -359,9 +447,12 @@ These are what make it readable — the same rules the daily report follows:
 - **Sections with nothing to say still appear**, with one italic line in that
   section's own terms — *No blockers*, *Nothing planned that slipped*, *No open
   bugs*. A vanished section reads as a check that never ran.
-- **Order is fixed:** verdict → summary → shipping → code → known issues →
-  spillover → watch → next step. The decision is first; caveats are last,
-  because nobody acts on them.
+- **Order is fixed:** verdict → summary → shipping → skipped Testing → code →
+  known issues → spillover → watch → next step. The decision is first; caveats
+  are last, because nobody acts on them.
+- **Never write "skipped QA" off the marker rung.** The wording throughout that
+  section is "no record of reaching Testing". A reader who takes a suspicion for
+  a finding goes and accuses a developer of something the data cannot show.
 - **Explain jargon inline the first time.** "Release candidate", "blocker" and
   "unlinked commit" are not obvious to a reader outside the team.
 - The report must be skimmable in under a minute by someone who does not know
@@ -370,15 +461,17 @@ These are what make it readable — the same rules the daily report follows:
 ## Important
 
 - **Fully read-only.** This skill never changes ticket state, never writes to
-  ClickUp, and never runs a git write. The tag command in step 10 is *shown*,
+  ClickUp, and never runs a git write. The tag command in step 11 is *shown*,
   never executed.
 - **The raw commit block is raw.** Exactly what `git log --oneline` printed —
   not reworded, reordered or filtered. The moment it is tidied it stops being
   usable in a postmortem, which is half the reason the section exists.
 - **Print the range in the header, always.** With no tags the range is inferred,
   so it must be visible and reproducible by anyone reading the report later.
-- Budget API calls: **one** `clickup_filter_tasks` fetch is the target. Git is
-  local and free. No per-ticket reads unless a specific ticket needs a detail.
+- Budget API calls: **one** `clickup_filter_tasks` fetch is the target, plus at
+  most one `clickup_get_bulk_tasks_time_in_status` and up to 10
+  `clickup_get_task_comments` for step 6. Git is local and free. No other
+  per-ticket reads unless a specific ticket needs a detail.
 - If the ClickUp API rate limit blocks the fetch, report that plainly and stop.
   Never fabricate counts. If it fails partway, keep the git side (it is real),
   mark the board-derived lines "unavailable — rate limited", and still show the

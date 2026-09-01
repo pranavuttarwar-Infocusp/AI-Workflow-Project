@@ -1,5 +1,5 @@
 ---
-description: QA ticket hygiene check — scans ClickUp tickets in "testing" and splits them by the `feature` tag. Non-feature tickets get the standard checks (PR/commit link, sprint tag). Feature tickets are audited for acceptance criteria and a PR link; a ticket with EITHER one gets core test cases generated ONCE and posted as a "QA test cases" comment after approval, while a ticket with NEITHER is bounced to "in review". A ticket that already has its suite is skipped on later runs, so a daily run never re-posts. Always asks the scan window first. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
+description: QA ticket hygiene check — scans ClickUp tickets in "testing" and splits them by the `feature` tag. Non-feature tickets get the standard checks (PR/commit link, sprint tag). Feature tickets are audited for acceptance criteria and a PR link; a ticket with EITHER one gets core test cases generated ONCE and posted as a "QA test cases" comment after approval, while a ticket with NEITHER is bounced to "in review". A ticket that already has its suite is skipped on later runs, so a daily run never re-posts. Also stamps a `reached-testing` tag on every ticket it scans, which is how the release report spots tickets closed without ever being tested. Always asks the scan window first. Triggers on "/qa-ticket-check", "check tickets for acceptance criteria", "run the AC police".
 ---
 
 # QA Ticket Check (Acceptance Criteria Police)
@@ -145,6 +145,38 @@ suite (step 9), not to draft it.
 
 ---
 
+### 6b. Mark every scanned ticket as having reached `testing` (needs approval)
+
+Every ticket fetched in step 2 was in `testing` when this skill saw it — that is
+the filter. Record that fact so it survives, because nothing else does:
+`Total time in Status`, the ClickApp that exposes real status history to the
+API, needs the ClickUp **Business** plan and this workspace is on **Free**. With
+no record, a ticket dragged straight from `in review` to `done` is
+indistinguishable from one QA actually tested. /qa-release-report reads this tag
+to answer "what shipped without being tested".
+
+   - Add the tag `reached-testing` with `clickup_add_tag_to_task` to every
+     ticket scanned this run that does not already carry it. You already have
+     each ticket's tags from step 2, so the check costs nothing.
+   - **One tag, ever. Never incremented, never removed.** It records a fact that
+     cannot become false — the ticket reached `testing` once, and re-reaching it
+     later changes nothing. This is deliberately unlike `bounced-<N>`, which
+     counts events.
+   - **Applies to every scanned ticket, whatever its verdict** — passed,
+     bounced, already covered, unsure. The fact recorded is "QA saw this in
+     `testing`", not "QA approved it". Skipping the bounced ones would make a
+     bounced ticket look untested forever, which is exactly backwards: a bounce
+     is proof it was in `testing`.
+   - Bundle it into ONE approval for the whole batch, asked after the step 6
+     table so no write happens before the user has seen the verdicts:
+     *"Tag these 5 tickets `reached-testing`?"* Never ask per ticket.
+   - **If the user declines, do not tag and say what it costs in one line** —
+     those tickets will show up in the next release report as having no record
+     of reaching Testing. Then carry on with the rest of the run; this step
+     never blocks a bounce or a test-case post.
+
+---
+
 ### 7. Path A — bounce incomplete tickets (needs approval)
 
 For each failing ticket, after the user confirms the list:
@@ -270,7 +302,8 @@ earlier suite was built from, so the two comments can be told apart:
 ### 11. Summarize
 
 Scanned N tickets (window X) → N standard / N feature · N passed · N bounced (with links) ·
-N unsure · test cases posted to N tickets · N already covered (skipped).
+N unsure · test cases posted to N tickets · N already covered (skipped) ·
+N newly tagged `reached-testing`.
 
 ## Important
 - Ask the window FIRST, act LAST — no ClickUp write before the user has seen the verdict
@@ -325,6 +358,18 @@ N unsure · test cases posted to N tickets · N already covered (skipped).
   one there would inflate every reopen count by one per daily run, which is worse
   than having no count at all. A reminder comment the user approves is also not a
   bounce and gets no tag.
+- **`reached-testing` and `bounced-<N>` are different kinds of tag — don't merge
+  them.** `reached-testing` records a fact (this ticket was in `testing`): added
+  once, never removed, added to every scanned ticket. `bounced-<N>` counts events
+  and only ever increments on a real bounce. Adding `reached-testing` more than
+  once, or only to passing tickets, breaks the release report's skipped-Testing
+  check in a way that looks like clean data.
+- **What the `reached-testing` tag doesn't measure.** It marks tickets THIS skill
+  scanned. A ticket that entered `testing` and left again between two runs is
+  never marked, so /qa-release-report's skipped-Testing list is a ceiling — a
+  list of tickets to ask about, not proven QA misses. Running this skill daily is
+  what keeps that list honest; the real fix is still the `Total time in Status`
+  ClickApp on Business.
 - **What the bounce tags do and don't measure.** They count bounces made by THIS
   skill. If a developer or QA drags a ticket from `testing` back to `in progress`
   by hand in the ClickUp UI, nothing records it. So the count is a floor, not a
